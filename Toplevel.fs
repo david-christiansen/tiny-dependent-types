@@ -2,6 +2,7 @@ module Toplevel
 
 open Microsoft.FSharp.Text.Lexing
 open System
+open Mono.Terminal
 
 
 open Nat
@@ -53,18 +54,18 @@ let evaluate state expr =
            printfn "  %s  :  %s" x y)
          (printf " Error: %s\n")
 
-let rec loop (s : state) : unit =
-  printf "\n> "
-  let input = Console.ReadLine ()
+let rec loop (le : LineEditor) (s : state) : unit =
+  printf "\n"
+  let input = le.Edit("> ","")
 
   lex input
   |> parse
   |> Result.fold (function
-                  | Eval e -> evaluate s e ; loop s
-                  | Postulate (x, ty) -> loop (postulate x ty s)
-                  | ShowState -> showState s ; loop s
+                  | Eval e -> evaluate s e ; loop le s
+                  | Postulate (x, ty) -> loop le (postulate x ty s)
+                  | ShowState -> showState s ; loop le s
                   | Quit -> printfn "bye!")
-                 (fun err -> printfn "%s" err ; loop s)
+                 (fun err -> printfn "%s" err ; loop le s)
 and showState = function
   | State (Global.Env ss) ->
       for (x, defn, ty) in ss do
@@ -77,8 +78,10 @@ let startState : state =
   postulate "false" (Free "Bool")
 
 let main () : unit =
+  let le = new LineEditor("sillytypes")
+
   printfn "Silly dependent type checker version 0.0.0.\n:q to quit."
-  loop startState
+  loop le startState
 
 main ()
 
