@@ -13,11 +13,13 @@ type term =
   | Univ of nat
   | Prim of string * term
 
+type case = Case of (string * term)
 
 type command =
   | Eval of term
   | Postulate of (string * term)
   | ShowState
+  | DataDef of (string * term * case list)
   | Quit
 
 let subscriptStringOf (str : string) =

@@ -18,8 +18,9 @@ and fixVars' ctx t =
 %}
 
 %token <string> ID
-%token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE
+%token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE PIPE
 %token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE
+%token CMD_DATADEF
 %token EOF
 
 %start parse
@@ -29,32 +30,39 @@ and fixVars' ctx t =
 %%
 
 parse:
-  | command EOF                   { $1                  }
-  | expr EOF                      { Eval (fixVars $1)   }
+  | command EOF                     { $1                   }
+  | expr EOF                        { Eval (fixVars $1)    }
 
 command:
-  | CMD_QUIT                      { Quit                }
-  | CMD_POSTULATE ID COLON expr   { Postulate ($2, $4)  }
-  | CMD_SHOWSTATE                 { ShowState           }
+  | CMD_QUIT                        { Quit                 }
+  | CMD_POSTULATE ID COLON expr     { Postulate ($2, $4)   }
+  | CMD_SHOWSTATE                   { ShowState            }
+  | CMD_DATADEF ID COLON expr cases { DataDef ($2, $4, $5) }
+
+cases:
+  |                                 { []                   }
+  | case cases                      { $1 :: $2             }
+case:
+  | PIPE ID COLON expr              { Case ($2, $4)        }
 
 expr:
-  | atom                          { $1                  }
-  | arrow                         { $1                  }
-  | application                   { $1                  }
+  | atom                            { $1                   }
+  | arrow                           { $1                   }
+  | application                     { $1                   }
 
 arrow:
-  | atom                          { $1                  }
-  | atom ARROW arrow              { Pi ("_", $1, $3)    }
+  | atom                            { $1                   }
+  | atom ARROW arrow                { Pi ("_", $1, $3)     }
 
 atom:
-  | LPAR expr RPAR                { $2                  }
-  | ID                            { Free $1             }
-  | PI     ID COLON expr DOT expr { Pi  ($2, $4, $6)    }
-  | LAMBDA ID COLON expr DOT expr { Lambda ($2, $4, $6) }
-  | SET                           { Univ Z              }
+  | LPAR expr RPAR                  { $2                   }
+  | ID                              { Free $1              }
+  | PI     ID COLON expr DOT expr   { Pi  ($2, $4, $6)     }
+  | LAMBDA ID COLON expr DOT expr   { Lambda ($2, $4, $6)  }
+  | SET                             { Univ Z               }
 
 application:
-  | atom atom                     { App ($1, $2)        }
-  | application atom              { App ($1, $2)        }
+  | atom atom                       { App ($1, $2)         }
+  | application atom                { App ($1, $2)         }
 
 %%

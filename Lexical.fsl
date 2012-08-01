@@ -29,6 +29,7 @@ rule token = parse
   | "->"                  { ARROW }
   | eof                   { EOF }
   | ':'                   { COLON }
+  | '|'                   { PIPE  }
   | ":q"                  { CMD_QUIT }
   | ":quit"               { CMD_QUIT }
   | ":p"                  { CMD_POSTULATE }
@@ -36,6 +37,7 @@ rule token = parse
   | ":s"                  { CMD_SHOWSTATE }
   | ":show"               { CMD_SHOWSTATE }
   | ":showstate"          { CMD_SHOWSTATE }
+  | ":data"               { CMD_DATADEF   }
   | '('                   { LPAR }
   | ')'                   { RPAR }
   | '_'                   { UNDERSCORE }

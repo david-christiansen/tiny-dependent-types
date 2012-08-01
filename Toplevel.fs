@@ -31,6 +31,7 @@ let printToken (tok : Grammar.token) : string =
     | Grammar.EOF -> "EOF"
     | Grammar.PI  -> "PI"
     | Grammar.LAMBDA -> "LAMBDA"
+    | Grammar.PIPE   -> "PIPE"
     | Grammar.ARROW -> "ARROW"
     | Grammar.COLON -> "COLON"
     | Grammar.ID x  -> "ID " + x
@@ -42,6 +43,7 @@ let printToken (tok : Grammar.token) : string =
     | Grammar.CMD_QUIT   -> "CMD_QUIT"
     | Grammar.CMD_POSTULATE   -> "CMD_POSTULATE"
     | Grammar.CMD_SHOWSTATE   -> "CMD_SHOWSTATE"
+    | Grammar.CMD_DATADEF     -> "CMD_DATADEF"
 
 let evaluate state expr =
   res {
@@ -64,6 +66,7 @@ let rec loop (le : LineEditor) (s : state) : unit =
                   | Eval e -> evaluate s e ; loop le s
                   | Postulate (x, ty) -> loop le (postulate x ty s)
                   | ShowState -> showState s ; loop le s
+                  | DataDef (x,y,z) -> printfn "%A -- %A -- %A" x y z; loop le s
                   | Quit -> printfn "bye!")
                  (fun err -> printfn "%s" err ; loop le s)
 and showState = function
