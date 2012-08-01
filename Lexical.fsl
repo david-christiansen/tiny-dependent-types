@@ -1,0 +1,34 @@
+{
+module Lexical
+
+open Microsoft.FSharp.Text.Lexing
+open Grammar
+
+let lexemeAsString lexbuf =
+    LexBuffer<char>.LexemeString lexbuf
+
+let keyword s =
+    match s with
+    | "Set"    -> SET
+    | "forall" -> PI
+    | _        -> ID s
+}
+
+let letter      = ['a'-'z' 'A'-'Z']
+let digit       = ['0'-'9']
+let space       = [' ' '\t']
+let newline     = "\n\r" | '\n' | '\r'
+let lambda      = '\\' | 'λ'
+
+rule token = parse
+  | space|newline         { token lexbuf }
+  | letter(letter|digit)* { keyword (lexemeAsString lexbuf) }
+  | lambda                { LAMBDA }
+  | 'Π'                   { PI     }
+  | '.'                   { DOT }
+  | eof                   { EOF }
+  | ':'                   { COLON }
+  | '('                   { LPAR }
+  | ')'                   { RPAR }
+  | '_'                   { UNDERSCORE }
+

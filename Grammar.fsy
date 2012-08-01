@@ -1,0 +1,48 @@
+%{
+
+open Nat
+open AST
+
+let rec fixVars t = fixVars' [] t
+and fixVars' ctx t =
+  match t with
+    | Bound n -> Bound n
+    | Free str -> match List.tryFindIndex (fun x -> x = str) ctx with
+                    | Some n -> Bound (natOfInt n)
+                    | None   -> Free str
+    | Pi (x, t1, t2) -> Pi (x, fixVars' ctx t1, fixVars' (x::ctx) t2)
+    | Lambda (x, t1, t2) -> Lambda (x, fixVars' ctx t1, fixVars' (x::ctx) t2)
+    | App (t1, t2) -> App (fixVars' ctx t1, fixVars' ctx t2)
+    | Univ n -> Univ n
+    | Prim (x, ty) -> Prim (x, ty)
+%}
+
+%token <string> ID
+%token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE
+%token EOF
+
+%start parse
+%type <term> parse
+%type <term> expr
+
+%%
+
+parse:
+  | expr EOF                      { fixVars $1 }
+
+expr:
+  | atom                          { $1                  }
+  | application                   { $1                  }
+
+atom:
+  | LPAR expr RPAR                { $2                  }
+  | ID                            { Free $1             }
+  | PI     ID COLON expr DOT expr { Pi  ($2, $4, $6)    }
+  | LAMBDA ID COLON expr DOT expr { Lambda ($2, $4, $6) }
+  | SET                           { Univ Z              }
+
+application:
+  | atom atom                     { App ($1, $2)        }
+  | application atom              { App ($1, $2)        }
+
+%%
