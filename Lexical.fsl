@@ -28,6 +28,13 @@ rule token = parse
   | '.'                   { DOT }
   | eof                   { EOF }
   | ':'                   { COLON }
+  | ":q"                  { CMD_QUIT }
+  | ":quit"               { CMD_QUIT }
+  | ":p"                  { CMD_POSTULATE }
+  | ":postulate"          { CMD_POSTULATE }
+  | ":s"                  { CMD_SHOWSTATE }
+  | ":show"               { CMD_SHOWSTATE }
+  | ":showstate"          { CMD_SHOWSTATE }
   | '('                   { LPAR }
   | ')'                   { RPAR }
   | '_'                   { UNDERSCORE }

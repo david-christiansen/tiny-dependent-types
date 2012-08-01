@@ -19,16 +19,23 @@ and fixVars' ctx t =
 
 %token <string> ID
 %token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE
+%token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE
 %token EOF
 
 %start parse
-%type <term> parse
+%type <command> parse
 %type <term> expr
 
 %%
 
 parse:
-  | expr EOF                      { fixVars $1 }
+  | command EOF                   { $1                  }
+  | expr EOF                      { Eval (fixVars $1)   }
+
+command:
+  | CMD_QUIT                      { Quit                }
+  | CMD_POSTULATE ID COLON expr   { Postulate ($2, $4)  }
+  | CMD_SHOWSTATE                 { ShowState           }
 
 expr:
   | atom                          { $1                  }

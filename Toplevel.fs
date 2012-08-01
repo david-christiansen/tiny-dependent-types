@@ -11,9 +11,13 @@ open Typechecker
 
 type state = State of Global.env
 
+let postulate x tp = function
+  State (Global.Env defs) -> State (Global.Env ((x, Prim (x, tp), tp) :: defs))
+
+
 let lex (str : String) : Lexing.LexBuffer<char> = Lexing.LexBuffer<char>.FromString(str)
 
-let parse (lexbuf : Lexing.LexBuffer<char>) : term result =
+let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
   try
     lexbuf |> Grammar.parse Lexical.token |> Result.Success
   with
@@ -34,13 +38,15 @@ let printToken (tok : Grammar.token) : string =
     | Grammar.RPAR -> "RPAR"
     | Grammar.SET  -> "SET"
     | Grammar.UNDERSCORE -> "UNDERSCORE"
+    | Grammar.CMD_QUIT   -> "CMD_QUIT"
+    | Grammar.CMD_POSTULATE   -> "CMD_POSTULATE"
+    | Grammar.CMD_SHOWSTATE   -> "CMD_SHOWSTATE"
 
-let tryParse state input =
+let evaluate state expr =
   res {
-    let! t = lex input |> parse
     let (State globEnv) = state
-    let! typ = typecheck emptyEnv globEnv t
-    let! result = eval t
+    let! typ = typecheck emptyEnv globEnv expr
+    let! result = eval expr
     return (pprintTerm result, pprintTerm typ)
   } |> Result.fold
          (fun (x, y) ->
@@ -50,12 +56,19 @@ let tryParse state input =
 let rec loop (s : state) : unit =
   printf "\n> "
   let input = Console.ReadLine ()
-  if input = ":q" || input = ":quit"
-  then printf "bye!\n"
-  else tryParse s input ; loop s
 
-let postulate x tp = function
-  State (Global.Env defs) -> State (Global.Env ((x, Prim (x, tp), tp) :: defs))
+  lex input
+  |> parse
+  |> Result.fold (function
+                  | Eval e -> evaluate s e ; loop s
+                  | Postulate (x, ty) -> loop (postulate x ty s)
+                  | ShowState -> showState s ; loop s
+                  | Quit -> printfn "bye!")
+                 (fun err -> printfn "%s" err ; loop s)
+and showState = function
+  | State (Global.Env ss) ->
+      for (x, defn, ty) in ss do
+        printfn "%s  =  %s  :  %s" x (pprintTerm defn) (pprintTerm ty)
 
 let startState : state =
   State Global.empty |>

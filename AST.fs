@@ -3,6 +3,7 @@ module AST
 
 open Nat
 
+
 type term =
   | Bound of nat
   | Free of string
@@ -12,6 +13,12 @@ type term =
   | Univ of nat
   | Prim of string * term
 
+
+type command =
+  | Eval of term
+  | Postulate of (string * term)
+  | ShowState
+  | Quit
 
 let subscriptStringOf (str : string) =
   str.Replace("-", "₋")
