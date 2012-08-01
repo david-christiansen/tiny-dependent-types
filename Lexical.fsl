@@ -26,6 +26,7 @@ rule token = parse
   | lambda                { LAMBDA }
   | 'Π'                   { PI     }
   | '.'                   { DOT }
+  | "->"                  { ARROW }
   | eof                   { EOF }
   | ':'                   { COLON }
   | ":q"                  { CMD_QUIT }
