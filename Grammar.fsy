@@ -18,8 +18,9 @@ and fixVars' ctx t =
 %}
 
 %token <string> ID
+%token <string> STRING
 %token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE PIPE
-%token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE
+%token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE CMD_LOAD
 %token CMD_DATADEF
 %token EOF
 
@@ -37,6 +38,7 @@ command:
   | CMD_QUIT                        { Quit                 }
   | CMD_POSTULATE ID COLON expr     { Postulate ($2, $4)   }
   | CMD_SHOWSTATE                   { ShowState            }
+  | CMD_LOAD filename               { Load $2              }
   | CMD_DATADEF ID COLON expr cases { DataDef ($2, $4, $5) }
 
 cases:
@@ -44,6 +46,9 @@ cases:
   | case cases                      { $1 :: $2             }
 case:
   | PIPE ID COLON expr              { Case ($2, $4)        }
+
+filename:
+  | STRING                          { $1                   }
 
 expr:
   | atom                            { $1                   }

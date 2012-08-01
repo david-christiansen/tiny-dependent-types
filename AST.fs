@@ -20,6 +20,7 @@ type command =
   | Postulate of (string * term)
   | ShowState
   | DataDef of (string * term * case list)
+  | Load of string
   | Quit
 
 let subscriptStringOf (str : string) =

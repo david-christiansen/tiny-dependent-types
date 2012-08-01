@@ -12,17 +12,23 @@ let keyword s =
     | "Set"    -> SET
     | "forall" -> PI
     | _        -> ID s
+
+let mkString (s : string) =
+  STRING (s.Substring(1, s.Length - 2))
 }
 
 let letter      = ['a'-'z' 'A'-'Z']
 let digit       = ['0'-'9']
 let space       = [' ' '\t']
+let filenamechar = ['a'-'z' 'A'-'Z' '/' '0'-'9' ' ']
+let quote       = '\"'
 let newline     = "\n\r" | '\n' | '\r'
 let lambda      = '\\' | 'λ'
 
 rule token = parse
   | space|newline         { token lexbuf }
   | letter(letter|digit)* { keyword (lexemeAsString lexbuf) }
+  | quote filenamechar+ quote { mkString (lexemeAsString lexbuf) }
   | lambda                { LAMBDA }
   | 'Π'                   { PI     }
   | '.'                   { DOT }
@@ -38,6 +44,7 @@ rule token = parse
   | ":show"               { CMD_SHOWSTATE }
   | ":showstate"          { CMD_SHOWSTATE }
   | ":data"               { CMD_DATADEF   }
+  | ":l" | ":load"        { CMD_LOAD }
   | '('                   { LPAR }
   | ')'                   { RPAR }
   | '_'                   { UNDERSCORE }
