@@ -104,17 +104,7 @@ let rec shiftUp cutoff = function
   | Univ n -> Univ n
   | Prim (str, tp) -> Prim (str, tp)
 
-(*
-let rec shiftDown = function
-  | Bound (S n) -> Bound n
-  | Bound Z -> failwithf "Cannot downshift Bound Z"
-  | Free x -> Free x
-  | Pi (x, tp, tm) -> Pi (x, shiftDown tp, shiftDown tm)
-  | Lambda (x, tp, tm) -> Lambda (x, shiftDown tp, shiftDown tm)
-  | App (t1, t2) -> App (shiftDown t1, shiftDown t2)
-  | Univ n -> Univ n
-  | Prim (str, tp) -> Prim (str, tp)
-*)
+
 
 let rec typecheck gamma (globals : Global.env) = function
   | Bound n -> getEnv n gamma
@@ -137,5 +127,5 @@ let rec typecheck gamma (globals : Global.env) = function
       let! t' = apply tp1 t2
       return t'
     }
-  | Univ n -> Success <| Univ n
+  | Univ n -> Success <| Univ (S n)
   | Prim (_, t) -> Success t

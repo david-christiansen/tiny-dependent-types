@@ -36,32 +36,19 @@ let printToken (tok : Grammar.token) : string =
     | Grammar.UNDERSCORE -> "UNDERSCORE"
 
 let tryParse state input =
-(*  seq {
-    let lexbuf = lex input
-    while not lexbuf.IsPastEndOfStream do
-      match Lexical.token lexbuf with
-        | Grammar.EOF -> yield! []
-        | tok -> yield tok
-  } |> Seq.map printToken |> Seq.reduce (fun x y -> x + ", " + y) |> printf "Lexer result: %s\n"*)
-  let parsed = lex input |> parse
-  //Result.fold (fun x -> printf "Parsed %s\n" (pprintTerm x)) (printf "%s\n") parsed
   res {
-    let! t = parsed
+    let! t = lex input |> parse
     let (State globEnv) = state
     let! typ = typecheck emptyEnv globEnv t
-    return (pprintTerm t, pprintTerm typ)
+    let! result = eval t
+    return (pprintTerm result, pprintTerm typ)
   } |> Result.fold
          (fun (x, y) ->
-           printf "Typechecking yielded:\n %A  :  %A\n" x y)
-         (printf "No type: %s\n")
-  res {
-    let! t = parsed
-    let! result = eval t
-    return pprintTerm result
-  } |> Result.fold (printf "Result: %s\n") (printf "%s\n")
+           printfn "  %s  :  %s" x y)
+         (printf " Error: %s\n")
 
 let rec loop (s : state) : unit =
-  printf "> "
+  printf "\n> "
   let input = Console.ReadLine ()
   if input = ":q" || input = ":quit"
   then printf "bye!\n"
@@ -76,8 +63,8 @@ let startState : state =
   postulate "true" (Free "Bool") |>
   postulate "false" (Free "Bool")
 
-
 let main () : unit =
+  printfn "Silly dependent type checker version 0.0.0.\n:q to quit."
   loop startState
 
 main ()

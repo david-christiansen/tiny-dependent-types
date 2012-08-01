@@ -24,3 +24,6 @@ let rec (@+) (n : nat) (m : nat) =
   match n with
     | Z -> m
     | S n' -> S (n' @+ m)
+
+let rec max (n : nat) (m : nat) =
+  if n @<= m then m else n
