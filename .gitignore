@@ -1,0 +1,8 @@
+*.dll
+*.exe
+Grammar.fsi
+Grammar.fs
+Lexical.fs
+Lexical.fsi
+*~
+doc/
