@@ -38,6 +38,6 @@ type ResultBuilder () =
   member x.Bind(v, f) = Result.bind f v
   member x.Return(v) = Success v
   member x.ReturnFrom(r) = r
-  
+
 
 let res = new ResultBuilder ()

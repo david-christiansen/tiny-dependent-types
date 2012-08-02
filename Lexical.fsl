@@ -20,7 +20,7 @@ let mkString (s : string) =
 let letter      = ['a'-'z' 'A'-'Z']
 let digit       = ['0'-'9']
 let space       = [' ' '\t']
-let filenamechar = ['a'-'z' 'A'-'Z' '/' '0'-'9' ' ']
+let filenamechar = ['a'-'z' 'A'-'Z' '/' '0'-'9' ' ' '_']
 let quote       = '\"'
 let newline     = "\n\r" | '\n' | '\r'
 let lambda      = '\\' | 'λ'
@@ -36,13 +36,10 @@ rule token = parse
   | eof                   { EOF }
   | ':'                   { COLON }
   | '|'                   { PIPE  }
-  | ":q"                  { CMD_QUIT }
-  | ":quit"               { CMD_QUIT }
-  | ":p"                  { CMD_POSTULATE }
-  | ":postulate"          { CMD_POSTULATE }
-  | ":s"                  { CMD_SHOWSTATE }
-  | ":show"               { CMD_SHOWSTATE }
-  | ":showstate"          { CMD_SHOWSTATE }
+  | newline newline       { SEPARATOR }
+  | ":q" | ":quit"        { CMD_QUIT }
+  | ":p" | ":postulate"   { CMD_POSTULATE }
+  | ":s" | ":showstate"   { CMD_SHOWSTATE }
   | ":data"               { CMD_DATADEF   }
   | ":l" | ":load"        { CMD_LOAD }
   | '('                   { LPAR }

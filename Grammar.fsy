@@ -22,24 +22,37 @@ and fixVars' ctx t =
 %token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE PIPE
 %token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE CMD_LOAD
 %token CMD_DATADEF
+%token SEPARATOR
 %token EOF
 
 %start parse
+%start command
+%start file
 %type <command> parse
+%type <command> command
+%type <command list> file
 %type <term> expr
 
 %%
 
 parse:
   | command EOF                     { $1                   }
-  | expr EOF                        { Eval (fixVars $1)    }
+
 
 command:
   | CMD_QUIT                        { Quit                 }
-  | CMD_POSTULATE ID COLON expr     { Postulate ($2, $4)   }
   | CMD_SHOWSTATE                   { ShowState            }
+  | file_cmd                        { $1                   }
+
+file_cmd:
+  | expr                            { Eval (fixVars $1)    }
+  | CMD_POSTULATE ID COLON expr     { Postulate ($2, $4)   }
   | CMD_LOAD filename               { Load $2              }
   | CMD_DATADEF ID COLON expr cases { DataDef ($2, $4, $5) }
+
+file:
+  | file_cmd SEPARATOR file         { $1 :: $3             }
+  | file_cmd EOF                    { [$1]                 }
 
 cases:
   |                                 { []                   }

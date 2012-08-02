@@ -20,7 +20,7 @@ let lex (str : String) : Lexing.LexBuffer<char> = Lexing.LexBuffer<char>.FromStr
 
 let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
   try
-    lexbuf |> Grammar.parse Lexical.token |> Result.Success
+    lexbuf |> Grammar.command Lexical.token |> Result.Success
   with
     | exn -> let pos = lexbuf.EndPos
              in Result.Failure <| sprintf "%s near line %d, column %d\n"
@@ -29,6 +29,7 @@ let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
 let printToken (tok : Grammar.token) : string =
   match tok with
     | Grammar.EOF -> "EOF"
+    | Grammar.SEPARATOR -> "SEPARATOR"
     | Grammar.PI  -> "PI"
     | Grammar.LAMBDA -> "LAMBDA"
     | Grammar.PIPE   -> "PIPE"
@@ -64,18 +65,45 @@ let rec loop (le : LineEditor) (s : state) : unit =
 
   lex input
   |> parse
-  |> Result.fold (function
-                  | Eval e -> evaluate s e ; loop le s
-                  | Postulate (x, ty) -> loop le (postulate x ty s)
-                  | ShowState -> showState s ; loop le s
-                  | Load x -> printfn "loading %A" x ; loop le s
-                  | DataDef (x,y,z) -> printfn "%A -- %A -- %A" x y z; loop le s
-                  | Quit -> printfn "bye!")
+  |> Result.bind (handleCmd s)
+  |> Result.fold (loop le)
                  (fun err -> printfn "%s" err ; loop le s)
+
+and handleCmd (s : state) (cmd : command) : state result =
+  match cmd with
+    | Eval e -> evaluate s e ; Success s
+    | Postulate (x, ty) -> Success (postulate x ty s)
+    | ShowState -> showState s ; Success s
+    | Load x -> printfn "loading %A..." x ;
+                loadFile s x
+    | DataDef (x,y,z) -> printfn "%A -- %A -- %A" x y z; Success s
+    | Quit -> System.Environment.Exit(0) ; Failure "exiting failed"
+
+and handleCmds (s : state) (cmds : command list) : state result =
+  match cmds with
+    | [] -> Success s
+    | c :: cs -> res {
+        let! newState = handleCmd s c
+        let! rest = handleCmds newState cs
+        return rest
+      }
+
 and showState = function
   | State (Global.Env ss) ->
       for (x, defn, ty) in ss do
         printfn "%s  =  %s  :  %s" x (pprintTerm defn) (pprintTerm ty)
+
+and loadFile (s : state) (filename : string) : state result =
+  let contents = System.IO.File.ReadAllText(filename)
+  let lexbuf = lex contents
+  try
+    lexbuf |> Grammar.file Lexical.token |> handleCmds s
+  with
+    | exn -> let pos = lexbuf.EndPos
+             sprintf "%s near line %d, column %d\n"
+                 (exn.Message) (pos.Line+1) pos.Column;
+             |> Failure
+
 
 let startState : state =
   State Global.empty |>
@@ -84,7 +112,7 @@ let startState : state =
   postulate "false" (Free "Bool")
 
 let main () : unit =
-  let le = new LineEditor("sillytypes")
+  let le = new LineEditor("deptypes")
 
   printfn "Silly dependent type checker version 0.0.0.\n:q to quit."
   loop le startState
