@@ -51,6 +51,7 @@ and fixVars' ctx t =
 %token SIGMA LBRAK RBRAK SEMICOLON FST SND
 %token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE CMD_LOAD
 %token CMD_DATADEF CMD_DEF
+%token CMD_DEBUG
 %token SEPARATOR
 %token EOF
 
@@ -71,6 +72,7 @@ parse:
 command:
   | CMD_QUIT                        { Quit                 }
   | CMD_SHOWSTATE                   { ShowState            }
+  | CMD_DEBUG                       { ToggleDebug          }
   | file_cmd                        { $1                   }
 
 file_cmd:

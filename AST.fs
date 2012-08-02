@@ -51,6 +51,7 @@ type command =
   | DataDef of (string * term * case list)
   | Def of (string * term)
   | Load of string
+  | ToggleDebug
   | Quit
 
 let subscriptStringOf (str : string) =

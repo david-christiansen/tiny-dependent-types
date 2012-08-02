@@ -36,21 +36,26 @@ open AST
 open Result
 open Typechecker
 
-type state = State of Global.env
+type state = {
+    globals: Global.env;
+    debug: bool
+  }
 
 let stateContains (s : state) (x : string) : (string * term * term) option =
   let rec findName = function
     | [] -> None
     | (x', tm, tp) :: _ when x = x' -> Some (x', tm, tp)
     | _ :: defs -> findName defs
-  match s with
-    | State (Global.Env defs) -> findName defs
+  match s.globals with
+    | Global.Env defs -> findName defs
 
-let postulate x tp = function
-  State (Global.Env defs) -> State (Global.Env ((x, Postulated (x, tp), tp) :: defs))
+let postulate x tp s =
+  match s.globals with
+    Global.Env defs -> {s with globals = Global.Env ((x, Postulated (x, tp), tp) :: defs)}
 
-let define x tm tp = function
-  State (Global.Env defs) -> State (Global.Env ((x, tm, tp) :: defs))
+let define x tm tp s =
+  match s.globals with
+    Global.Env defs -> {s with globals = Global.Env ((x, tm, tp) :: defs)}
 
 
 let lex (str : String) : Lexing.LexBuffer<char> = Lexing.LexBuffer<char>.FromString(str)
@@ -89,15 +94,15 @@ let printToken (tok : Grammar.token) : string =
     | Grammar.CMD_DATADEF   -> "CMD_DATADEF"
     | Grammar.CMD_DEF       -> "CMD_DEF"
     | Grammar.CMD_LOAD  -> "CMD_LOAD"
+    | Grammar.CMD_DEBUG -> "CMD_DEBUG"
     | Grammar.FST       -> "FST"
     | Grammar.SND       -> "SND"
     | Grammar.SEMICOLON -> "SEMICOLON"
 
 let evaluate state expr =
   res {
-    let (State globEnv) = state
-    let! typ = typecheck emptyEnv globEnv expr
-    let! result = eval globEnv expr
+    let! typ = typecheck emptyEnv state.globals expr
+    let! result = eval state.globals expr
     return (pprintTerm result, pprintTerm typ)
   } |> Result.fold
          (fun (x, y) ->
@@ -123,6 +128,8 @@ and handleCmd (s : state) (cmd : command) : state result =
                 loadFile s x
     | DataDef (x,y,z) -> printfn "%A -- %A -- %A" x y z; Success s
     | Def (x, t) -> doDefine s x t
+    | ToggleDebug -> printfn "Debugging is now %s" (if not s.debug then "ON" else "OFF") ;
+                     Success {s with debug = not s.debug}
     | Quit -> System.Environment.Exit(0) ; Failure "exiting failed"
 
 and handleCmds (s : state) (cmds : command list) : state result =
@@ -134,8 +141,9 @@ and handleCmds (s : state) (cmds : command list) : state result =
         return rest
       }
 
-and showState = function
-  | State (Global.Env ss) ->
+and showState (s : state) : unit =
+  match s.globals with
+    Global.Env ss ->
       for (x, defn, ty) in ss do
         printfn "%s  =  %s  :  %s" x (pprintTerm defn) (pprintTerm ty)
 
@@ -154,9 +162,8 @@ and doDefine (s : state) (x : string) (t : term) : state result =
   match stateContains s x with
     | None ->
       res {
-        let (State globEnv) = s
-        let! typ = typecheck emptyEnv globEnv t
-        let! result = eval globEnv t
+        let! typ = typecheck emptyEnv s.globals t
+        let! result = eval s.globals t
         return define x result typ s
       }
     | Some (x, tm, tp) ->
@@ -165,7 +172,7 @@ and doDefine (s : state) (x : string) (t : term) : state result =
 
 
 let startState : state =
-  let emptyState = State Global.empty
+  let emptyState = {globals = Global.empty ; debug = false}
   loadFile emptyState "prelude"
   |> Result.fold (id)
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;

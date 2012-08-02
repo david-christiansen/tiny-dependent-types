@@ -76,6 +76,7 @@ rule token = parse
   | ":s" | ":showstate"   { CMD_SHOWSTATE }
   | ":data"               { CMD_DATADEF   }
   | ":define" | ":def"    { CMD_DEF       }
+  | ":debug"              { CMD_DEBUG     }
   | ":l" | ":load"        { CMD_LOAD      }
   | '('                   { LPAR }
   | ')'                   { RPAR }
