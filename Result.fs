@@ -57,6 +57,9 @@ module Result =
       | Success a -> Failure <| err a
       | Failure msg -> Failure msg
 
+  let failIf (cond : bool) (err : string) : unit result =
+    if cond then Failure err else Success ()
+
   let foreach (op : 'a -> unit) = function
     | Success a -> op a ; ()
     | Failure _ -> ()
@@ -70,6 +73,15 @@ module Result =
           | Failure msg -> Failure msg
           | Success xs -> Success (x :: xs)
 
+  (* Don't build up the intermediate list *)
+  let rec sequence_ (rs: 'a result list) : unit result =
+    match rs with
+      | [] -> Success ()
+      | Failure msg :: _ -> Failure msg
+      | Success x :: rxs ->
+        match sequence_ rxs with
+          | Failure msg -> Failure msg
+          | Success _ -> Success ()
 
   (* mapM *)
   let mapList (f : 'a -> 'b result) (rs : 'a list) : 'b list result =

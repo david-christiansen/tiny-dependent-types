@@ -43,6 +43,7 @@ type term =
   | Postulated of string * term
   | Datatype of datatype
   | Constructor of construct
+  | ConstrApp of construct * (term list)
 
 and datatype = {
     name : string
@@ -102,3 +103,8 @@ and pprintTerm' t ctx =
     | Postulated (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
     | Datatype {name = n} -> n
     | Constructor {name = n} -> n
+    | ConstrApp (c, args) ->
+        "(" + c.name + " " +
+        (List.map (fun arg -> pprintTerm' arg ctx) args
+         |> List.reduce (fun x y -> x + " " + y)) +
+        ")"

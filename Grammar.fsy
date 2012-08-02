@@ -44,12 +44,13 @@ and fixVars' ctx t =
     | Univ n -> Univ n
     | Postulated (x, ty) -> Postulated (x, ty)
     | Datatype d -> Datatype d
-    | Constructor info ->
-        Constructor {
-          info with
-            signature = fixCSigVars ctx info.signature
-            result = info.result (* TODO fix when new types aren't stuck in kind * *)
-        }
+    | Constructor info -> Constructor <| fixConstr ctx info
+    | ConstrApp (c, args) -> ConstrApp (fixConstr ctx c, List.map (fixVars' ctx) args)
+and fixConstr ctx (info : construct) : construct = {
+    info with
+      signature = fixCSigVars ctx info.signature
+      result = info.result (* TODO fix when new types aren't stuck in kind * *)
+  }
 and fixCSigVars (ctx : string list) = function
   | [] -> []
   | (None, t) :: rest -> (None, fixVars' ctx t) :: fixCSigVars ("_"::ctx) rest

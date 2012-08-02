@@ -187,7 +187,18 @@ let startState : state =
                  |> Result.fold id
                       (fun err -> printfn "Couldn't add Nat: %s" err ; emptyState)
 
-  loadFile natState "prelude"
+  let treeT : datatype = {name = "Tree"}
+  let leaf : construct = {name = "Leaf" ; signature = [] ; result = treeT}
+  let branch : construct = {
+      name = "Branch"
+      signature = [(None, Free "Tree"); (None, Free "Tree")]
+      result = treeT
+    }
+  let treeState = addInductive natState treeT [leaf ; branch]
+                 |> Result.fold id
+                      (fun err -> printfn "Couldn't add Tree: %s" err ; natState)
+
+  loadFile treeState "prelude"
   |> Result.fold (id)
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
                    emptyState)

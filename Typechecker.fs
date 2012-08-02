@@ -29,6 +29,7 @@ module Typechecker
 open Nat
 open AST
 open Result
+open Utils
 
 
 module Global =
@@ -86,6 +87,10 @@ let rec eval (globals : Global.env) = function
   | Postulated (str, tp) -> Success <| Postulated (str, tp)
   | Datatype d -> Success <| Datatype d
   | Constructor c -> Success <| Constructor c
+  | ConstrApp (c, args) -> res {
+      let! args' = Result.mapList (eval globals) args
+      return ConstrApp (c, args')
+    }
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
@@ -98,6 +103,18 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let! body' = subst Z t2 body
         let! result = eval globals body'
         return result
+      }
+    | Constructor c -> res {
+        let! arg = eval globals t2
+        return ConstrApp (c, [arg])
+      }
+    | ConstrApp (c, args) -> res {
+        let! x =
+          Result.failIf (c.signature.Length <= args.Length)
+            (sprintf "Too many arguments to %s." c.name)
+        let! newArg = eval globals t2
+        let args' = snoc args newArg
+        return ConstrApp (c, args')
       }
     | _ -> Failure "Can only apply lambda or pi"
 
@@ -138,17 +155,23 @@ and subst (n : nat) (t : term) (subject : term) : term result =
     | Postulated (str, tp) -> Success <| Postulated (str, tp)
     | Datatype d -> Success <| Datatype d
     | Constructor info ->
-        let rec substSignature n = function
-          | [] -> Success []
-          | (x, ty) :: rest -> res {
-              let! ty' = subst n t ty
-              let! ss' = substSignature (S n) rest
-              return (x, ty') :: ss'
-            }
         res {
-          let! newSig = substSignature n info.signature
+          let! newSig = substSignature n t info.signature
           return Constructor {info with signature = newSig}
         }
+    | ConstrApp (c, args) ->
+        res {
+          let! args' = Result.mapList (subst n t) args
+          let! newSig = substSignature n t c.signature
+          return ConstrApp ({c with signature = newSig}, args')
+        }
+and substSignature (n : nat) (t : term) = function
+  | [] -> Success []
+  | (x, ty) :: rest -> res {
+      let! ty' = subst n t ty
+      let! ss' = substSignature (S n) t rest
+      return (x, ty') :: ss'
+    }
 
 
 let equiv (globals : Global.env) t1 t2 : unit result =
@@ -182,6 +205,9 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
           info with
             signature = shiftSignature cutoff info.signature
         }
+    | ConstrApp (c, args) ->
+        let c' = {c with signature = shiftSignature cutoff c.signature}
+        ConstrApp (c', List.map (shiftUp cutoff) args)
 
 
 
@@ -246,3 +272,15 @@ let rec typecheck gamma (globals : Global.env) = function
         | (Some x, xt) :: ss -> Pi (x, xt, constrType ss)
         | (None, ty) :: ss -> Pi ("_", ty, constrType ss)
       Success <| constrType info.signature
+  | ConstrApp (c, args) ->
+    try
+      res {
+        let! argTypes = List.map (typecheck gamma globals) args |> Result.sequence
+        let argSig = List.zip argTypes (List.map snd c.signature)
+        let! matches = List.map (uncurry (equiv globals)) argSig |> Result.sequence_
+        return Datatype c.result
+      }
+    with
+      | :? System.ArgumentException ->
+        sprintf "Wrong number of arguments to %s" c.name
+        |> Failure

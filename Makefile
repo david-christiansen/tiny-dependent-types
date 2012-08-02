@@ -31,8 +31,11 @@ Grammar.dll: Grammar.fs AST.dll
 Result.dll: Result.fs
 	$(FSC) $(LIBFLAGS) $(FLAGS) Result.fs
 
-Typechecker.dll : Typechecker.fs AST.dll Result.dll
-	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll Typechecker.fs
+Utils.dll : Utils.fs
+	$(FSC) $(LIBFLAGS) $(FLAGS) Utils.fs
+
+Typechecker.dll : Typechecker.fs AST.dll Result.dll Utils.dll
+	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll -r Utils.dll Typechecker.fs
 
 clean:
 	rm *.dll
