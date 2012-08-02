@@ -44,6 +44,8 @@ let keyword s =
 
 let mkString (s : string) =
   STRING (s.Substring(1, s.Length - 2))
+
+
 }
 
 let letter      = ['a'-'z' 'A'-'Z']
@@ -82,3 +84,52 @@ rule token = parse
   | ')'                   { RPAR }
   | '_'                   { UNDERSCORE }
 
+
+{
+let printToken (tok : Grammar.token) : string =
+  match tok with
+    | Grammar.EOF    -> "EOF"
+    | Grammar.SEPARATOR -> "SEPARATOR"
+    | Grammar.PI     -> "PI"
+    | Grammar.SIGMA  -> "SIGMA"
+    | Grammar.LAMBDA -> "LAMBDA"
+    | Grammar.PIPE   -> "PIPE"
+    | Grammar.ARROW  -> "ARROW"
+    | Grammar.COLON  -> "COLON"
+    | Grammar.ID x   -> "ID " + x
+    | Grammar.DOT    -> "DOT"
+    | Grammar.LPAR   -> "LPAR"
+    | Grammar.RPAR   -> "RPAR"
+    | Grammar.LBRAK  -> "LBRAK"
+    | Grammar.RBRAK  -> "RBRAK"
+    | Grammar.SET    -> "SET"
+    | Grammar.MAKE_EQUAL    -> "MAKE_EQUAL"
+    | Grammar.STRING x      -> sprintf "STRING %A" x
+    | Grammar.UNDERSCORE    -> "UNDERSCORE"
+    | Grammar.CMD_QUIT      -> "CMD_QUIT"
+    | Grammar.CMD_POSTULATE -> "CMD_POSTULATE"
+    | Grammar.CMD_SHOWSTATE -> "CMD_SHOWSTATE"
+    | Grammar.CMD_DATADEF   -> "CMD_DATADEF"
+    | Grammar.CMD_DEF       -> "CMD_DEF"
+    | Grammar.CMD_LOAD  -> "CMD_LOAD"
+    | Grammar.CMD_DEBUG -> "CMD_DEBUG"
+    | Grammar.FST       -> "FST"
+    | Grammar.SND       -> "SND"
+    | Grammar.SEMICOLON -> "SEMICOLON"
+
+let lex (str : string) : LexBuffer<char> =
+  LexBuffer<char>.FromString(str)
+
+let printLex input =
+  seq {
+    let lexbuf = lex input
+    while not lexbuf.IsPastEndOfStream do
+      match token lexbuf with
+        | Grammar.EOF -> yield! []
+        | tok -> yield tok
+  }
+  |> Seq.map printToken
+  |> Seq.reduce (fun x y -> x + ", " + y)
+  |> printf "Lexer result: %s\n"
+
+}

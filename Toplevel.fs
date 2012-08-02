@@ -58,8 +58,6 @@ let define x tm tp s =
     Global.Env defs -> {s with globals = Global.Env ((x, tm, tp) :: defs)}
 
 
-let lex (str : String) : Lexing.LexBuffer<char> = Lexing.LexBuffer<char>.FromString(str)
-
 let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
   try
     lexbuf |> Grammar.command Lexical.token |> Result.Success
@@ -68,36 +66,6 @@ let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
              in Result.Failure <| sprintf "%s near line %d, column %d\n"
                                     (exn.Message) (pos.Line+1) pos.Column
 
-let printToken (tok : Grammar.token) : string =
-  match tok with
-    | Grammar.EOF    -> "EOF"
-    | Grammar.SEPARATOR -> "SEPARATOR"
-    | Grammar.PI     -> "PI"
-    | Grammar.SIGMA  -> "SIGMA"
-    | Grammar.LAMBDA -> "LAMBDA"
-    | Grammar.PIPE   -> "PIPE"
-    | Grammar.ARROW  -> "ARROW"
-    | Grammar.COLON  -> "COLON"
-    | Grammar.ID x   -> "ID " + x
-    | Grammar.DOT    -> "DOT"
-    | Grammar.LPAR   -> "LPAR"
-    | Grammar.RPAR   -> "RPAR"
-    | Grammar.LBRAK  -> "LBRAK"
-    | Grammar.RBRAK  -> "RBRAK"
-    | Grammar.SET    -> "SET"
-    | Grammar.MAKE_EQUAL    -> "MAKE_EQUAL"
-    | Grammar.STRING x      -> sprintf "STRING %A" x
-    | Grammar.UNDERSCORE    -> "UNDERSCORE"
-    | Grammar.CMD_QUIT      -> "CMD_QUIT"
-    | Grammar.CMD_POSTULATE -> "CMD_POSTULATE"
-    | Grammar.CMD_SHOWSTATE -> "CMD_SHOWSTATE"
-    | Grammar.CMD_DATADEF   -> "CMD_DATADEF"
-    | Grammar.CMD_DEF       -> "CMD_DEF"
-    | Grammar.CMD_LOAD  -> "CMD_LOAD"
-    | Grammar.CMD_DEBUG -> "CMD_DEBUG"
-    | Grammar.FST       -> "FST"
-    | Grammar.SND       -> "SND"
-    | Grammar.SEMICOLON -> "SEMICOLON"
 
 let evaluate state expr =
   res {
@@ -113,7 +81,15 @@ let rec loop (le : LineEditor) (s : state) : unit =
   printf "\n"
   let input = le.Edit("> ","")
 
-  lex input
+  if s.debug
+  then Lexical.printLex input
+       Lexical.lex input
+       |> parse
+       |> Result.fold (printfn "Parse result: %A")
+            (printfn "Parse error: %s")
+
+
+  Lexical.lex input
   |> parse
   |> Result.bind (handleCmd s)
   |> Result.fold (loop le)
@@ -149,7 +125,7 @@ and showState (s : state) : unit =
 
 and loadFile (s : state) (filename : string) : state result =
   let contents = System.IO.File.ReadAllText(filename)
-  let lexbuf = lex contents
+  let lexbuf = Lexical.lex contents
   try
     lexbuf |> Grammar.file Lexical.token |> handleCmds s
   with
