@@ -61,8 +61,8 @@ rule token = parse
   | lambda                { LAMBDA }
   | "Π"                   { PI     }
   | "Σ"                   { SIGMA }
-  | "<"                   { LBRAK }
-  | ">"                   { RBRAK }
+  | "{"                   { LBRAK }
+  | "}"                   { RBRAK }
   | '.'                   { DOT }
   | ';'                   { SEMICOLON }
   | "->"                  { ARROW }

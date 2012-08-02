@@ -75,6 +75,13 @@ and pprintTerm' t ctx =
                         "." + pprintTerm' t2 (x::ctx)
     | Lambda (x, t1, t2) -> "λ" + x + ":" + pprintTerm' t1 ctx +
                             "." + pprintTerm' t2 (x::ctx)
+    | Sigma (x, ty, p) -> "Σ" + x + ":" + pprintTerm' ty ctx +
+                          "." + pprintTerm' p (x::ctx)
+    | Pair (x, w, prf) -> "{" + x + "|" +
+                          pprintTerm' w ctx + ";" +
+                          pprintTerm' prf (x::ctx) + "}"
+    | Fst t' -> "fst " + pprintTerm' t' ctx
+    | Snd t' -> "snd " + pprintTerm' t' ctx
     | App (t1, t2) -> "(" + pprintTerm' t1 ctx + ") " +
                       "(" + pprintTerm' t2 ctx + ")"
     | Univ Z -> "Set"

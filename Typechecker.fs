@@ -67,6 +67,16 @@ let rec eval (globals : Global.env) = function
   | Free x -> Global.lookupTerm x globals
   | Pi (x, ty, body) -> Success <| Pi (x, ty, body)
   | Lambda (x, ty, body) -> Success <| Lambda (x, ty, body)
+  | Sigma (x, ty, p) -> Success <| Sigma (x, ty, p)
+  | Pair (x, w, prf) -> res {
+      let! w' = eval globals w
+      let! prf' = eval globals prf
+      return Pair (x, w', prf')
+    }
+  | Fst (Pair (x, w, prf)) -> Success w
+  | Fst x -> Failure <| sprintf "Can't take first projection of %s" (pprintTerm x)
+  | Snd (Pair (x, w, prf)) -> subst Z w prf
+  | Snd x -> Failure <| sprintf "Can't take second projection of %s" (pprintTerm x)
   | App (t1, t2) -> res {
       let! fn = eval globals t1
       let! arg = eval globals t2
@@ -90,6 +100,7 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
       }
     | _ -> Failure "Can only apply lambda or pi"
 
+(* Substitute t for the bound var with index n in subject *)
 and subst (n : nat) (t : term) (subject : term) : term result =
   match subject with
     | Bound n' when n = n' -> Success t
@@ -105,6 +116,18 @@ and subst (n : nat) (t : term) (subject : term) : term result =
         let! body' = subst (S n) t body
         return Lambda (x, ty', body')
       }
+    | Sigma (x, ty, p) -> res {
+        let! ty' = subst n t ty
+        let! p' = subst (S n) t p
+        return Sigma (x, ty', p')
+      }
+    | Pair (x, w, prf) -> res {
+        let! w' = subst n t w
+        let! prf' = subst (S n) t prf
+        return Pair (x, w', prf')
+      }
+    | Fst p -> Result.map Fst (subst n t p)
+    | Snd p -> Result.map Snd (subst n t p)
     | App (t1, t2) -> res {
         let! t1' = subst n t t1
         let! t2' = subst n t t2
@@ -120,15 +143,22 @@ let equiv (globals : Global.env) t1 t2 : unit result =
   else Failure <| sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2)
 
 
-let rec shiftUp cutoff = function
-  | Bound n when cutoff @<= n -> Bound (S n)
-  | Bound n -> Bound n
-  | Free x -> Free x
-  | Pi (x, tp, tm) -> Pi (x, shiftUp cutoff tp, shiftUp (S cutoff) tm)
-  | Lambda (x, tp, tm) -> Lambda (x, shiftUp cutoff tp, shiftUp (S cutoff) tm)
-  | App (t1, t2) -> App (shiftUp cutoff t1, shiftUp cutoff t2)
-  | Univ n -> Univ n
-  | Postulated (str, tp) -> Postulated (str, tp)
+let rec shiftUp (cutoff : nat) (subject : term) : term =
+  let shiftBinding =
+    function (id, arg, body) -> (id, shiftUp cutoff arg, shiftUp (S cutoff) body)
+  match subject with
+    | Bound n when cutoff @<= n -> Bound (S n)
+    | Bound n -> Bound n
+    | Free x -> Free x
+    | Pi (x, tp, tm) -> Pi (shiftBinding (x, tp, tm))
+    | Lambda (x, tp, tm) -> Lambda (shiftBinding (x, tp, tm))
+    | Sigma (x, ty, p) -> Sigma (shiftBinding (x, ty, p))
+    | Pair (x, w, prf) -> Pair (shiftBinding (x, w, prf))
+    | Fst p -> Fst (shiftUp cutoff p)
+    | Snd p -> Snd (shiftUp cutoff p)
+    | App (t1, t2) -> App (shiftUp cutoff t1, shiftUp cutoff t2)
+    | Univ n -> Univ n
+    | Postulated (str, tp) -> Postulated (str, tp)
 
 
 
@@ -140,6 +170,37 @@ let rec typecheck gamma (globals : Global.env) = function
       let gamma' = addEnv (shiftUp Z tp) gamma
       let! bodyType = typecheck gamma' globals tm
       return Pi (x, tp, bodyType)
+    }
+  | Sigma (x, ty, p) -> res {
+      let gamma' = addEnv (shiftUp Z ty) gamma
+      let! bodyType = typecheck gamma' globals p
+      return Univ Z (* TODO: predicativity *)
+    }
+  | Pair (x, w, prf) -> res {
+      let! witnessT = typecheck gamma globals w
+      let gamma' = addEnv (shiftUp Z witnessT) gamma
+      let! p = typecheck gamma' globals prf
+      return Sigma (x, witnessT, p)
+    }
+  | Fst p -> res {
+      let! pairT = typecheck gamma globals p
+      let! result =
+        match pairT with
+          | Sigma (x, ty, p) -> Success ty
+          | t -> Failure <| sprintf "Cannot take first projection of non-Σ-type %s"
+                              (pprintTerm t)
+      return result
+    }
+  | Snd p -> res {
+      let! pairT = typecheck gamma globals p
+      let! second' =
+        match pairT with
+          | Sigma (x, ty, p) -> Success p
+          | t -> Failure <| sprintf "Cannot take second projection of non-Σ-type %s"
+                              (pprintTerm t)
+      let! first = eval globals (Fst p)
+      let! second = subst Z first second'
+      return second
     }
   | App (t1, t2) -> res {
       let! tp1 = typecheck gamma globals t1

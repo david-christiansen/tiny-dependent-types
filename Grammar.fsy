@@ -110,10 +110,16 @@ atom:
   | ID                              { Free $1              }
   | PI     ID COLON expr DOT expr   { Pi  ($2, $4, $6)     }
   | LAMBDA ID COLON expr DOT expr   { Lambda ($2, $4, $6)  }
+  | SIGMA ID COLON expr DOT expr    { Sigma ($2, $4, $6)   }
+  | LBRAK ID PIPE expr SEMICOLON expr RBRAK
+                                    { Pair ($2, $4, $6)    }
   | SET                             { Univ Z               }
 
 application:
   | atom atom                       { App ($1, $2)         }
   | application atom                { App ($1, $2)         }
+  | FST expr                        { Fst ($2)             }
+  | SND expr                        { Snd ($2)             }
+
 
 %%
