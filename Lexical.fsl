@@ -37,6 +37,9 @@ let keyword s =
     match s with
     | "Set"    -> SET
     | "forall" -> PI
+    | "exists" -> SIGMA
+    | "fst"    -> FST
+    | "snd"    -> SND
     | _        -> ID s
 
 let mkString (s : string) =
@@ -57,7 +60,11 @@ rule token = parse
   | quote filenamechar+ quote { mkString (lexemeAsString lexbuf) }
   | lambda                { LAMBDA }
   | "Π"                   { PI     }
+  | "Σ"                   { SIGMA }
+  | "<"                   { LBRAK }
+  | ">"                   { RBRAK }
   | '.'                   { DOT }
+  | ';'                   { SEMICOLON }
   | "->"                  { ARROW }
   | eof                   { EOF }
   | ":="                  { MAKE_EQUAL }

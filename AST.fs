@@ -34,6 +34,10 @@ type term =
   | Free of string
   | Pi of string * term * term
   | Lambda of string * term * term
+  | Sigma of string * term * term
+  | Pair of string * term * term
+  | Fst of term
+  | Snd of term
   | App of term * term
   | Univ of nat
   | Postulated of string * term

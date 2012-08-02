@@ -36,6 +36,10 @@ and fixVars' ctx t =
                     | None   -> Free str
     | Pi (x, t1, t2) -> Pi (x, fixVars' ctx t1, fixVars' (x::ctx) t2)
     | Lambda (x, t1, t2) -> Lambda (x, fixVars' ctx t1, fixVars' (x::ctx) t2)
+    | Sigma (x, t1, t2) -> Sigma (x, fixVars' ctx t1, fixVars' (x::ctx) t2)
+    | Pair (x, t1, t2) -> Pair (x, fixVars' ctx t1, fixVars' (x::ctx) t2)
+    | Fst t -> Fst (fixVars' ctx t)
+    | Snd t -> Snd (fixVars' ctx t)
     | App (t1, t2) -> App (fixVars' ctx t1, fixVars' ctx t2)
     | Univ n -> Univ n
     | Postulated (x, ty) -> Postulated (x, ty)
@@ -44,6 +48,7 @@ and fixVars' ctx t =
 %token <string> ID
 %token <string> STRING
 %token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE PIPE MAKE_EQUAL
+%token SIGMA LBRAK RBRAK SEMICOLON FST SND
 %token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE CMD_LOAD
 %token CMD_DATADEF CMD_DEF
 %token SEPARATOR

@@ -65,27 +65,33 @@ let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
 
 let printToken (tok : Grammar.token) : string =
   match tok with
-    | Grammar.EOF -> "EOF"
+    | Grammar.EOF    -> "EOF"
     | Grammar.SEPARATOR -> "SEPARATOR"
-    | Grammar.PI  -> "PI"
+    | Grammar.PI     -> "PI"
+    | Grammar.SIGMA  -> "SIGMA"
     | Grammar.LAMBDA -> "LAMBDA"
     | Grammar.PIPE   -> "PIPE"
-    | Grammar.ARROW -> "ARROW"
-    | Grammar.COLON -> "COLON"
-    | Grammar.ID x  -> "ID " + x
-    | Grammar.DOT -> "DOT"
-    | Grammar.LPAR -> "LPAR"
-    | Grammar.RPAR -> "RPAR"
-    | Grammar.SET  -> "SET"
-    | Grammar.MAKE_EQUAL -> "MAKE_EQUAL"
-    | Grammar.STRING x -> sprintf "STRING %A" x
-    | Grammar.UNDERSCORE -> "UNDERSCORE"
-    | Grammar.CMD_QUIT   -> "CMD_QUIT"
-    | Grammar.CMD_POSTULATE   -> "CMD_POSTULATE"
-    | Grammar.CMD_SHOWSTATE   -> "CMD_SHOWSTATE"
-    | Grammar.CMD_DATADEF     -> "CMD_DATADEF"
-    | Grammar.CMD_DEF         -> "CMD_DEF"
-    | Grammar.CMD_LOAD -> "CMD_LOAD"
+    | Grammar.ARROW  -> "ARROW"
+    | Grammar.COLON  -> "COLON"
+    | Grammar.ID x   -> "ID " + x
+    | Grammar.DOT    -> "DOT"
+    | Grammar.LPAR   -> "LPAR"
+    | Grammar.RPAR   -> "RPAR"
+    | Grammar.LBRAK  -> "LBRAK"
+    | Grammar.RBRAK  -> "RBRAK"
+    | Grammar.SET    -> "SET"
+    | Grammar.MAKE_EQUAL    -> "MAKE_EQUAL"
+    | Grammar.STRING x      -> sprintf "STRING %A" x
+    | Grammar.UNDERSCORE    -> "UNDERSCORE"
+    | Grammar.CMD_QUIT      -> "CMD_QUIT"
+    | Grammar.CMD_POSTULATE -> "CMD_POSTULATE"
+    | Grammar.CMD_SHOWSTATE -> "CMD_SHOWSTATE"
+    | Grammar.CMD_DATADEF   -> "CMD_DATADEF"
+    | Grammar.CMD_DEF       -> "CMD_DEF"
+    | Grammar.CMD_LOAD  -> "CMD_LOAD"
+    | Grammar.FST       -> "FST"
+    | Grammar.SND       -> "SND"
+    | Grammar.SEMICOLON -> "SEMICOLON"
 
 let evaluate state expr =
   res {
