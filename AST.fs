@@ -1,3 +1,28 @@
+(*
+----------------------------------------------------------------------
+Copyright (c) 2012 David Raymond Christiansen
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+ * The software is provided "as is", without warranty of any kind,
+  express or implied, including but not limited to the warranties of
+  merchantability, fitness for a particular purpose and
+  noninfringement.  In no event shall the authors or copyright
+  holders be liable for any claim, damages or other liability,
+  whether in an action of contract, tort or otherwise, arising from,
+  out of or in connection with the software or the use or other
+  dealings in the software.
+----------------------------------------------------------------------
+*)
 
 module AST
 
@@ -11,7 +36,7 @@ type term =
   | Lambda of string * term * term
   | App of term * term
   | Univ of nat
-  | Prim of string * term
+  | Postulated of string * term
 
 type case = Case of (string * term)
 
@@ -50,4 +75,4 @@ and pprintTerm' t ctx =
                       "(" + pprintTerm' t2 ctx + ")"
     | Univ Z -> "Set"
     | Univ n -> "Set" + subscriptStringOf (sprintf "%i" (intOfNat n))
-    | Prim (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
+    | Postulated (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
