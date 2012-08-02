@@ -36,30 +36,30 @@ let envWith t = Env (t :: [])
 
 let emptyEnv = Env []
 
-let rec eval = function
+let rec eval (globals : Global.env) = function
   | Bound n -> Failure "Too high of index on bound var. Parser error?"
-  | Free x -> Success (Free x)
+  | Free x -> Global.lookupTerm x globals
   | Pi (x, ty, body) -> Success <| Pi (x, ty, body)
   | Lambda (x, ty, body) -> Success <| Lambda (x, ty, body)
   | App (t1, t2) -> res {
-      let! fn = eval t1
-      let! arg = eval t2
-      let! result = apply fn arg
+      let! fn = eval globals t1
+      let! arg = eval globals t2
+      let! result = apply globals fn arg
       return result
     }
   | Univ n -> Success <| Univ n
   | Prim (str, tp) -> Success <| Prim (str, tp)
 
-and apply (t1 : term) (t2 : term) : term result =
+and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
     | Lambda (x, ty, body) -> res {
         let! body' = subst Z t2 body
-        let! result = eval body'
+        let! result = eval globals body'
         return result
       }
     | Pi (x, ty, body) -> res {
         let! body' = subst Z t2 body
-        let! result = eval body'
+        let! result = eval globals body'
         return result
       }
     | _ -> Failure "Can only apply lambda or pi"
@@ -88,8 +88,8 @@ and subst (n : nat) (t : term) (subject : term) : term result =
     | Prim (str, tp) -> Success <| Prim (str, tp)
 
 
-let equiv t1 t2 : unit result =
-  if eval t1 = eval t2
+let equiv (globals : Global.env) t1 t2 : unit result =
+  if eval globals t1 = eval globals t2
   then Success ()
   else Failure <| sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2)
 
@@ -120,11 +120,11 @@ let rec typecheck gamma (globals : Global.env) = function
       let! tp2 = typecheck gamma globals t2
       let! matches =
         match tp1 with
-          | Pi (_, tp1arg, tp1body) -> equiv tp1arg tp2
+          | Pi (_, tp1arg, tp1body) -> equiv globals tp1arg tp2
           | _ -> Failure
                  <| sprintf "Can only apply Π-types. Attempted to apply %s to %s."
                     (pprintTerm tp1) (pprintTerm tp2)
-      let! t' = apply tp1 t2
+      let! t' = apply globals tp1 t2
       return t'
     }
   | Univ n -> Success <| Univ (S n)

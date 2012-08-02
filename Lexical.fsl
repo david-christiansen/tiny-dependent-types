@@ -34,14 +34,16 @@ rule token = parse
   | '.'                   { DOT }
   | "->"                  { ARROW }
   | eof                   { EOF }
+  | ":="                  { MAKE_EQUAL }
   | ':'                   { COLON }
   | '|'                   { PIPE  }
   | newline newline       { SEPARATOR }
-  | ":q" | ":quit"        { CMD_QUIT }
+  | ":q" | ":quit"        { CMD_QUIT      }
   | ":p" | ":postulate"   { CMD_POSTULATE }
   | ":s" | ":showstate"   { CMD_SHOWSTATE }
   | ":data"               { CMD_DATADEF   }
-  | ":l" | ":load"        { CMD_LOAD }
+  | ":define" | ":def"    { CMD_DEF       }
+  | ":l" | ":load"        { CMD_LOAD      }
   | '('                   { LPAR }
   | ')'                   { RPAR }
   | '_'                   { UNDERSCORE }

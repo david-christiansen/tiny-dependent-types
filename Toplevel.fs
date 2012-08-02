@@ -12,8 +12,19 @@ open Typechecker
 
 type state = State of Global.env
 
+let stateContains (s : state) (x : string) : (string * term * term) option =
+  let rec findName = function
+    | [] -> None
+    | (x', tm, tp) :: _ when x = x' -> Some (x', tm, tp)
+    | _ :: defs -> findName defs
+  match s with
+    | State (Global.Env defs) -> findName defs
+
 let postulate x tp = function
   State (Global.Env defs) -> State (Global.Env ((x, Prim (x, tp), tp) :: defs))
+
+let define x tm tp = function
+  State (Global.Env defs) -> State (Global.Env ((x, tm, tp) :: defs))
 
 
 let lex (str : String) : Lexing.LexBuffer<char> = Lexing.LexBuffer<char>.FromString(str)
@@ -40,19 +51,21 @@ let printToken (tok : Grammar.token) : string =
     | Grammar.LPAR -> "LPAR"
     | Grammar.RPAR -> "RPAR"
     | Grammar.SET  -> "SET"
+    | Grammar.MAKE_EQUAL -> "MAKE_EQUAL"
     | Grammar.STRING x -> sprintf "STRING %A" x
     | Grammar.UNDERSCORE -> "UNDERSCORE"
     | Grammar.CMD_QUIT   -> "CMD_QUIT"
     | Grammar.CMD_POSTULATE   -> "CMD_POSTULATE"
     | Grammar.CMD_SHOWSTATE   -> "CMD_SHOWSTATE"
     | Grammar.CMD_DATADEF     -> "CMD_DATADEF"
+    | Grammar.CMD_DEF         -> "CMD_DEF"
     | Grammar.CMD_LOAD -> "CMD_LOAD"
 
 let evaluate state expr =
   res {
     let (State globEnv) = state
     let! typ = typecheck emptyEnv globEnv expr
-    let! result = eval expr
+    let! result = eval globEnv expr
     return (pprintTerm result, pprintTerm typ)
   } |> Result.fold
          (fun (x, y) ->
@@ -77,6 +90,7 @@ and handleCmd (s : state) (cmd : command) : state result =
     | Load x -> printfn "loading %A..." x ;
                 loadFile s x
     | DataDef (x,y,z) -> printfn "%A -- %A -- %A" x y z; Success s
+    | Def (x, t) -> doDefine s x t
     | Quit -> System.Environment.Exit(0) ; Failure "exiting failed"
 
 and handleCmds (s : state) (cmds : command list) : state result =
@@ -103,6 +117,19 @@ and loadFile (s : state) (filename : string) : state result =
              sprintf "%s near line %d, column %d\n"
                  (exn.Message) (pos.Line+1) pos.Column;
              |> Failure
+
+and doDefine (s : state) (x : string) (t : term) : state result =
+  match stateContains s x with
+    | None ->
+      res {
+        let (State globEnv) = s
+        let! typ = typecheck emptyEnv globEnv t
+        let! result = eval globEnv t
+        return define x result typ s
+      }
+    | Some (x, tm, tp) ->
+      Failure
+      <| sprintf "%s already defined as %s  :  %s" x (pprintTerm tm) (pprintTerm tp)
 
 
 let startState : state =

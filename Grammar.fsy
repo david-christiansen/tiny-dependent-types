@@ -19,9 +19,9 @@ and fixVars' ctx t =
 
 %token <string> ID
 %token <string> STRING
-%token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE PIPE
+%token LAMBDA PI DOT COLON SET LPAR RPAR ARROW UNDERSCORE PIPE MAKE_EQUAL
 %token CMD_QUIT CMD_POSTULATE CMD_SHOWSTATE CMD_LOAD
-%token CMD_DATADEF
+%token CMD_DATADEF CMD_DEF
 %token SEPARATOR
 %token EOF
 
@@ -31,7 +31,7 @@ and fixVars' ctx t =
 %type <command> parse
 %type <command> command
 %type <command list> file
-%type <term> expr
+%type <term> exprTop
 
 %%
 
@@ -45,10 +45,11 @@ command:
   | file_cmd                        { $1                   }
 
 file_cmd:
-  | expr                            { Eval (fixVars $1)    }
-  | CMD_POSTULATE ID COLON expr     { Postulate ($2, $4)   }
-  | CMD_LOAD filename               { Load $2              }
-  | CMD_DATADEF ID COLON expr cases { DataDef ($2, $4, $5) }
+  | exprTop                            { Eval $1              }
+  | CMD_POSTULATE ID COLON exprTop     { Postulate ($2, $4)   }
+  | CMD_LOAD filename                  { Load $2              }
+  | CMD_DATADEF ID COLON exprTop cases { DataDef ($2, $4, $5) }
+  | CMD_DEF ID MAKE_EQUAL exprTop      { Def ($2, $4)         }
 
 file:
   | file_cmd SEPARATOR file         { $1 :: $3             }
@@ -62,6 +63,9 @@ case:
 
 filename:
   | STRING                          { $1                   }
+
+exprTop:
+  | expr                            { fixVars $1           }
 
 expr:
   | atom                            { $1                   }
