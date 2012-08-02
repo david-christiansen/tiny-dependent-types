@@ -41,6 +41,18 @@ type term =
   | App of term * term
   | Univ of nat
   | Postulated of string * term
+  | Datatype of datatype
+  | Constructor of construct
+
+and datatype = {
+    name : string
+  }
+
+and construct = {
+    name : string
+    signature : (string option * term) list
+    result : datatype
+  }
 
 type case = Case of (string * term)
 
@@ -88,3 +100,5 @@ and pprintTerm' t ctx =
     | Univ Z -> "Set"
     | Univ n -> "Set" + subscriptStringOf (sprintf "%i" (intOfNat n))
     | Postulated (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
+    | Datatype {name = n} -> n
+    | Constructor {name = n} -> n

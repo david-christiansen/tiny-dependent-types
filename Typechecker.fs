@@ -84,6 +84,8 @@ let rec eval (globals : Global.env) = function
     }
   | Univ n -> Success <| Univ n
   | Postulated (str, tp) -> Success <| Postulated (str, tp)
+  | Datatype d -> Success <| Datatype d
+  | Constructor c -> Success <| Constructor c
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
@@ -134,6 +136,19 @@ and subst (n : nat) (t : term) (subject : term) : term result =
       }
     | Univ n -> Success <| Univ n
     | Postulated (str, tp) -> Success <| Postulated (str, tp)
+    | Datatype d -> Success <| Datatype d
+    | Constructor info ->
+        let rec substSignature n = function
+          | [] -> Success []
+          | (x, ty) :: rest -> res {
+              let! ty' = subst n t ty
+              let! ss' = substSignature (S n) rest
+              return (x, ty') :: ss'
+            }
+        res {
+          let! newSig = substSignature n info.signature
+          return Constructor {info with signature = newSig}
+        }
 
 
 let equiv (globals : Global.env) t1 t2 : unit result =
@@ -145,6 +160,9 @@ let equiv (globals : Global.env) t1 t2 : unit result =
 let rec shiftUp (cutoff : nat) (subject : term) : term =
   let shiftBinding =
     function (id, arg, body) -> (id, shiftUp cutoff arg, shiftUp (S cutoff) body)
+  let rec shiftSignature (cutoff : nat) = function
+    | [] -> []
+    | (x, t) :: rest -> (x, shiftUp cutoff t) :: shiftSignature (S cutoff) rest
   match subject with
     | Bound n when cutoff @<= n -> Bound (S n)
     | Bound n -> Bound n
@@ -158,6 +176,12 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
     | App (t1, t2) -> App (shiftUp cutoff t1, shiftUp cutoff t2)
     | Univ n -> Univ n
     | Postulated (str, tp) -> Postulated (str, tp)
+    | Datatype d -> Datatype d
+    | Constructor info ->
+        Constructor {
+          info with
+            signature = shiftSignature cutoff info.signature
+        }
 
 
 
@@ -215,3 +239,10 @@ let rec typecheck gamma (globals : Global.env) = function
     }
   | Univ n -> Success <| Univ (S n)
   | Postulated (_, t) -> Success t
+  | Datatype d -> Success <| Univ Z (* TODO: predicativity *)
+  | Constructor info ->
+      let rec constrType = function
+        | [] -> Datatype info.result
+        | (Some x, xt) :: ss -> Pi (x, xt, constrType ss)
+        | (None, ty) :: ss -> Pi ("_", ty, constrType ss)
+      Success <| constrType info.signature

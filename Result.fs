@@ -37,6 +37,7 @@ module Result =
       | Success a   -> onSuccess a
       | Failure msg -> onFail msg
 
+  (* fmap *)
   let map (f : 'a -> 'b) (res : 'a result) : 'b result =
     match res with
       | Success a   -> Success <| f a
@@ -59,6 +60,20 @@ module Result =
   let foreach (op : 'a -> unit) = function
     | Success a -> op a ; ()
     | Failure _ -> ()
+
+  let rec sequence (rs : 'a result list) : 'a list result =
+    match rs with
+      | [] -> Success []
+      | Failure msg :: _ -> Failure msg
+      | Success x :: rxs ->
+        match sequence rxs with
+          | Failure msg -> Failure msg
+          | Success xs -> Success (x :: xs)
+
+
+  (* mapM *)
+  let mapList (f : 'a -> 'b result) (rs : 'a list) : 'b list result =
+    sequence (List.map f rs)
 
 type ResultBuilder () =
   member x.Bind(v, f) = Result.bind f v

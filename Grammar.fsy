@@ -43,6 +43,17 @@ and fixVars' ctx t =
     | App (t1, t2) -> App (fixVars' ctx t1, fixVars' ctx t2)
     | Univ n -> Univ n
     | Postulated (x, ty) -> Postulated (x, ty)
+    | Datatype d -> Datatype d
+    | Constructor info ->
+        Constructor {
+          info with
+            signature = fixCSigVars ctx info.signature
+            result = info.result (* TODO fix when new types aren't stuck in kind * *)
+        }
+and fixCSigVars (ctx : string list) = function
+  | [] -> []
+  | (None, t) :: rest -> (None, fixVars' ctx t) :: fixCSigVars ("_"::ctx) rest
+  | (Some x, t) :: rest -> (Some x, fixVars' ctx t) :: fixCSigVars (x::ctx) rest
 %}
 
 %token <string> ID

@@ -53,10 +53,16 @@ let postulate x tp s =
   match s.globals with
     Global.Env defs -> {s with globals = Global.Env ((x, Postulated (x, tp), tp) :: defs)}
 
-let define x tm tp s =
+let define (x : string) (tm : term) (tp : term) (s : state) : state =
   match s.globals with
     Global.Env defs -> {s with globals = Global.Env ((x, tm, tp) :: defs)}
 
+let defineCheck x tm s =
+  res {
+    let! tp = typecheck emptyEnv s.globals tm
+    let s' = define x tm tp s
+    return s'
+  }
 
 let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
   try
@@ -146,10 +152,42 @@ and doDefine (s : state) (x : string) (t : term) : state result =
       Failure
       <| sprintf "%s already defined as %s  :  %s" x (pprintTerm tm) (pprintTerm tp)
 
+let addInductive (s : state) (t : datatype) (cs : construct list) : state result =
+  let defineConstr (s : state) (c : construct) : state result =
+    res {
+      let name = c.name
+      let tm = Constructor c
+      let! s' = defineCheck name tm s
+      return s'
+    }
+  let rec defineConstrs (s : state) (constrs : construct list) : state result =
+    match constrs with
+      | [] -> Success s
+      | c :: cs -> res {
+          let! s' = defineConstr s c
+          let! s'' = defineConstrs s' cs
+          return s''
+        }
+  res {
+    let! withType = defineCheck t.name (Datatype t) s
+    let! withConstrs = defineConstrs withType cs
+    return withConstrs
+  }
 
 let startState : state =
   let emptyState = {globals = Global.empty ; debug = false}
-  loadFile emptyState "prelude"
+
+
+  (* Temporary hack until parsing works *)
+  let natT : datatype = {name = "Nat"}
+  let natZ : construct = {name = "Z" ; signature = [] ; result = natT}
+  let natS : construct = {name = "S" ; signature = [(None, Free "Nat")] ; result = natT }
+
+  let natState = addInductive emptyState natT [natZ ; natS]
+                 |> Result.fold id
+                      (fun err -> printfn "Couldn't add Nat: %s" err ; emptyState)
+
+  loadFile natState "prelude"
   |> Result.fold (id)
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
                    emptyState)
