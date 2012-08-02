@@ -6,6 +6,9 @@ probably have to modify the Makefile in order to get it to compile; in
 particular, make sure to check the variable FSC for the name of your F#
 compiler.
 
+Please ensure that your terminal is set to use UTF-8.  The output from the
+toplevel makes use of proper Π and λ symbols.
+
 The file "prelude" contains the standard library and is read on startup.  See
 this file for examples of syntax.
 
