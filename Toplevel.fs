@@ -35,6 +35,7 @@ open Nat
 open AST
 open Result
 open Typechecker
+open Utils
 
 type state = {
     globals: Global.env;
@@ -51,11 +52,12 @@ let stateContains (s : state) (x : string) : (string * term * term) option =
 
 let postulate x tp s =
   match s.globals with
-    Global.Env defs -> {s with globals = Global.Env ((x, Postulated (x, tp), tp) :: defs)}
+    Global.Env defs ->
+      { s with globals = Global.Env (snoc defs (x, Postulated (x, tp), tp)) }
 
 let define (x : string) (tm : term) (tp : term) (s : state) : state =
   match s.globals with
-    Global.Env defs -> {s with globals = Global.Env ((x, tm, tp) :: defs)}
+    Global.Env defs -> {s with globals =  Global.Env <| snoc defs (x, tm, tp)}
 
 let defineCheck x tm s =
   res {
