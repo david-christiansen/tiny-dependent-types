@@ -5,3 +5,19 @@ As of yet, it has only been developed with Mono running on Ubuntu.  You will
 probably have to modify the Makefile in order to get it to compile; in
 particular, make sure to check the variable FSC for the name of your F#
 compiler.
+
+The file "prelude" contains the standard library and is read on startup.  See
+this file for examples of syntax.
+
+At the toplevel, any typed expression will be typechecked and evaluated.
+Additionally, the following commands are available:
+
+:quit         :q    Quit the toplevel
+:postulate    :p    Postulate a new opaque term inhabiting some type.
+                    Example: :postulate Bool : Set
+:showstate    :s    Show the contents of the global state (definitions)
+:data               Placeholder for datatype definitions
+:define       :def  Define a new term in the global state.
+                    Example: :def id := \T:Set.\x:T.x
+:load         :l    Read the contents of a file, executing as if they were typed at
+                    the toplevel.  Example: :l "prelude"
