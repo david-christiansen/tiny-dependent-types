@@ -214,7 +214,11 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
 let rec typecheck gamma (globals : Global.env) = function
   | Bound n -> getEnv n gamma
   | Free x -> Global.lookupType x globals
-  | Pi _ -> Success <| Univ Z (* TODO: predicativity *)
+  | Pi (x, tp, tm) -> res {
+      let gamma' = addEnv (shiftUp Z tp) gamma
+      let! bodyType = typecheck gamma' globals tm
+      return Univ Z (* TODO: predicativity *)
+    }
   | Lambda (x, tp, tm) -> res {
       let gamma' = addEnv (shiftUp Z tp) gamma
       let! bodyType = typecheck gamma' globals tm
