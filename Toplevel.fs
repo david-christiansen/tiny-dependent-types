@@ -106,10 +106,11 @@ and loadFile (s : state) (filename : string) : state result =
 
 
 let startState : state =
-  State Global.empty |>
-  postulate "Bool" (Univ Z) |>
-  postulate "true" (Free "Bool") |>
-  postulate "false" (Free "Bool")
+  let emptyState = State Global.empty
+  loadFile emptyState "prelude"
+  |> Result.fold (id)
+       (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
+                   emptyState)
 
 let main () : unit =
   let le = new LineEditor("deptypes")

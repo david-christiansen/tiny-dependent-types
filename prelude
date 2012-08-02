@@ -1,0 +1,5 @@
+:postulate Bool : Set
+
+:postulate true : Bool
+
+:postulate false : Bool
