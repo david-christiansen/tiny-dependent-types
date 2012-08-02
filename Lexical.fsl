@@ -49,14 +49,14 @@ let space       = [' ' '\t']
 let filenamechar = ['a'-'z' 'A'-'Z' '/' '0'-'9' ' ' '_']
 let quote       = '\"'
 let newline     = "\n\r" | '\n' | '\r'
-let lambda      = '\\' | 'λ'
+let lambda      = '\\' | "λ"
 
 rule token = parse
   | space|newline         { token lexbuf }
   | letter(letter|digit)* { keyword (lexemeAsString lexbuf) }
   | quote filenamechar+ quote { mkString (lexemeAsString lexbuf) }
   | lambda                { LAMBDA }
-  | 'Π'                   { PI     }
+  | "Π"                   { PI     }
   | '.'                   { DOT }
   | "->"                  { ARROW }
   | eof                   { EOF }
