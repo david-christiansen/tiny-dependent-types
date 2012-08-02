@@ -70,12 +70,11 @@ let rec eval (globals : Global.env) = function
   | Sigma (x, ty, p) -> Success <| Sigma (x, ty, p)
   | Pair (x, w, prf) -> res {
       let! w' = eval globals w
-      let! prf' = eval globals prf
-      return Pair (x, w', prf')
+      return Pair (x, w', prf)
     }
   | Fst (Pair (x, w, prf)) -> Success w
   | Fst x -> Failure <| sprintf "Can't take first projection of %s" (pprintTerm x)
-  | Snd (Pair (x, w, prf)) -> subst Z w prf
+  | Snd (Pair (x, w, prf)) -> Result.bind (eval globals) (subst Z w prf)
   | Snd x -> Failure <| sprintf "Can't take second projection of %s" (pprintTerm x)
   | App (t1, t2) -> res {
       let! fn = eval globals t1
