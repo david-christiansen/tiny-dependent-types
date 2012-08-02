@@ -1,5 +1,4 @@
-----------------------------------------------------------------------
-Copyright (c) 2012 David Raymond Christiansen
+This software is Copyright (c) 2012 David Raymond Christiansen
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -20,5 +19,7 @@ furnished to do so, subject to the following conditions:
   whether in an action of contract, tort or otherwise, arising from,
   out of or in connection with the software or the use or other
   dealings in the software.
-----------------------------------------------------------------------
 
+
+Note that, for ease of building, the file getline.cs is included according to
+the terms of the MIT/X11 license.
