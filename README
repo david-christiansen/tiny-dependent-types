@@ -28,6 +28,6 @@ Additionally, the following commands are available:
 
 
 The syntax of terms generally follows ordinary conventions. However, to assist
-in typing, "\" (backslash) can be used instead of "λ" and "forall" can be used
-instead of "Π".  Also, "A -> B" can be written instead of Πx:A.B where x is
-not free in B.
+in typing, "\" (backslash) can be used instead of "λ", "forall" can be used
+instead of "Π", and "exists" can be used instead of "Σ".  Also, "A -> B" can
+be written instead of Πx:A.B where x is not free in B.
