@@ -3,3 +3,5 @@
 :postulate true : Bool
 
 :postulate false : Bool
+
+:def id := \T:Set.\x:T.x
