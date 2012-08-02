@@ -74,7 +74,7 @@ let rec eval (globals : Global.env) = function
       return result
     }
   | Univ n -> Success <| Univ n
-  | Prim (str, tp) -> Success <| Prim (str, tp)
+  | Postulated (str, tp) -> Success <| Postulated (str, tp)
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
@@ -111,7 +111,7 @@ and subst (n : nat) (t : term) (subject : term) : term result =
         return App (t1', t2')
       }
     | Univ n -> Success <| Univ n
-    | Prim (str, tp) -> Success <| Prim (str, tp)
+    | Postulated (str, tp) -> Success <| Postulated (str, tp)
 
 
 let equiv (globals : Global.env) t1 t2 : unit result =
@@ -128,7 +128,7 @@ let rec shiftUp cutoff = function
   | Lambda (x, tp, tm) -> Lambda (x, shiftUp cutoff tp, shiftUp (S cutoff) tm)
   | App (t1, t2) -> App (shiftUp cutoff t1, shiftUp cutoff t2)
   | Univ n -> Univ n
-  | Prim (str, tp) -> Prim (str, tp)
+  | Postulated (str, tp) -> Postulated (str, tp)
 
 
 
@@ -154,4 +154,4 @@ let rec typecheck gamma (globals : Global.env) = function
       return t'
     }
   | Univ n -> Success <| Univ (S n)
-  | Prim (_, t) -> Success t
+  | Postulated (_, t) -> Success t
