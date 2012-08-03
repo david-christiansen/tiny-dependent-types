@@ -103,7 +103,7 @@ let rec usesBinding n t =
 let rec pprintTerm t = pprintTerm' t []
 and pprintTerm' t ctx =
   match t with
-    | Bound n -> "%" + ctx.Item(intOfNat n) + "%" + pprintNat n
+    | Bound n -> ctx.Item(intOfNat n)
     | Free str -> "`" + str + "`"
     | Pi (x, t1, t2) when not (usesBinding Z t2) ->
         "(" + pprintTerm' t1 ctx +
@@ -128,7 +128,7 @@ and pprintTerm' t ctx =
                       "(" + pprintTerm' t2 ctx + ")"
     | Univ Z -> "Set"
     | Univ n -> "Set" + subscriptStringOf (sprintf "%i" (intOfNat n))
-    | Postulated (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
+    | Postulated (str, tp) -> str
     | Datatype {name = n} -> n
     | Constructor (c, []) -> c.name
     | Constructor (c, args) ->
