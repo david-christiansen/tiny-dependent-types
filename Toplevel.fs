@@ -79,7 +79,9 @@ let evaluate state expr =
   res {
     let! typ = typecheck emptyEnv state.globals expr
     let! result = normalize state.globals expr
-    return (pprintTerm result, pprintTerm typ)
+    if state.debug
+    then return (sprintf "%A" result, sprintf "%A" typ)
+    else return (pprintTerm result, pprintTerm typ)
   } |> Result.fold
          (fun (x, y) ->
            printfn "  %s  :  %s" x y)

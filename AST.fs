@@ -95,12 +95,13 @@ let rec usesBinding n t =
     | App (t1, t2) -> usesBinding n t1 || usesBinding n t2
     | Univ _ -> false
     | Postulated _ -> false
-    | Datatype _ -> false
+    | Datatype (_, args) ->
+        List.map (usesBinding n) args
+        |> List.reduce (||)
     | Constructor (_, args) ->
-      let rec bindingIn n = function
-        | [] -> false
-        | ar :: ars -> usesBinding n ar || bindingIn (S n) ars
-      bindingIn n args
+        List.map (usesBinding n) args
+        |> List.reduce (||)
+
 
 let rec pprintTerm t = pprintTerm' t []
 and pprintTerm' t ctx =
@@ -132,13 +133,15 @@ and pprintTerm' t ctx =
     | Univ n -> "Set" + subscriptStringOf (sprintf "%i" (intOfNat n))
     | Postulated (str, tp) -> str
     | Datatype ({name = n}, []) -> n
-    | Datatype ({name = n}, args) ->
-        "(" + n + " " +
+    | Datatype (d, args) ->
+        "(" + d.name + " " +
         (List.map (fun arg -> pprintTerm' arg ctx) args
-         |> join " ") + ")"
+         |> join " ") +
+        ")"
     | Constructor (c, []) -> c.name
     | Constructor (c, args) ->
         "(" + c.name + " " +
         (List.map (fun arg -> pprintTerm' arg ctx) args
          |> join " ") +
         ")"
+

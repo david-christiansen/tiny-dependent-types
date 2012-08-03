@@ -16,3 +16,10 @@ let gensym () =
 
 let join (sep : string) (strs : string list) : string =
   List.reduce (fun x y -> x + sep + y) strs
+
+module List =
+  let rec zip' (xs : 'a list) (ys : 'b list) : ('a * 'b) list =
+    match xs, ys with
+      | [], _ -> []
+      | _, [] -> []
+      | x :: xs', y :: ys' -> (x, y) :: zip' xs' ys'
