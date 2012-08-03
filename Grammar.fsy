@@ -44,8 +44,7 @@ and fixVars' ctx t =
     | Univ n -> Univ n
     | Postulated (x, ty) -> Postulated (x, ty)
     | Datatype d -> Datatype d
-    | Constructor info -> Constructor <| fixConstr ctx info
-    | ConstrApp (c, args) -> ConstrApp (fixConstr ctx c, List.map (fixVars' ctx) args)
+    | Constructor (c, args) -> Constructor (fixConstr ctx c, List.map (fixVars' ctx) args)
 and fixConstr ctx (info : construct) : construct = {
     info with
       signature = fixCSigVars ctx info.signature

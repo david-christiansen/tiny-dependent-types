@@ -86,10 +86,9 @@ let rec eval (globals : Global.env) = function
   | Univ n -> Success <| Univ n
   | Postulated (str, tp) -> Success <| Postulated (str, tp)
   | Datatype d -> Success <| Datatype d
-  | Constructor c -> Success <| Constructor c
-  | ConstrApp (c, args) -> res {
+  | Constructor (c, args) -> res {
       let! args' = Result.mapList (eval globals) args
-      return ConstrApp (c, args')
+      return Constructor (c, args')
     }
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
@@ -104,17 +103,13 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let! result = eval globals body'
         return result
       }
-    | Constructor c -> res {
-        let! arg = eval globals t2
-        return ConstrApp (c, [arg])
-      }
-    | ConstrApp (c, args) -> res {
+    | Constructor (c, args) -> res {
         let! x =
           Result.failIf (c.signature.Length <= args.Length)
-            (sprintf "Too many arguments to %s." c.name)
+            (sprintf "Too many arguments to %s. Typechecker bug?" c.name)
         let! newArg = eval globals t2
         let args' = snoc args newArg
-        return ConstrApp (c, args')
+        return Constructor (c, args')
       }
     | _ -> Failure "Can only apply lambda or pi"
 
@@ -154,16 +149,11 @@ and subst (n : nat) (t : term) (subject : term) : term result =
     | Univ n -> Success <| Univ n
     | Postulated (str, tp) -> Success <| Postulated (str, tp)
     | Datatype d -> Success <| Datatype d
-    | Constructor info ->
-        res {
-          let! newSig = substSignature n t info.signature
-          return Constructor {info with signature = newSig}
-        }
-    | ConstrApp (c, args) ->
+    | Constructor (c, args) ->
         res {
           let! args' = Result.mapList (subst n t) args
           let! newSig = substSignature n t c.signature
-          return ConstrApp ({c with signature = newSig}, args')
+          return Constructor ({c with signature = newSig}, args')
         }
 and substSignature (n : nat) (t : term) = function
   | [] -> Success []
@@ -200,14 +190,9 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
     | Univ n -> Univ n
     | Postulated (str, tp) -> Postulated (str, tp)
     | Datatype d -> Datatype d
-    | Constructor info ->
-        Constructor {
-          info with
-            signature = shiftSignature cutoff info.signature
-        }
-    | ConstrApp (c, args) ->
+    | Constructor (c, args) ->
         let c' = {c with signature = shiftSignature cutoff c.signature}
-        ConstrApp (c', List.map (shiftUp cutoff) args)
+        Constructor (c', List.map (shiftUp cutoff) args)
 
 
 
@@ -266,21 +251,20 @@ let rec typecheck gamma (globals : Global.env) = function
   | Univ n -> Success <| Univ (S n)
   | Postulated (_, t) -> Success t
   | Datatype d -> Success <| Univ Z (* TODO: predicativity *)
-  | Constructor info ->
-      let rec constrType = function
-        | [] -> Datatype info.result
-        | (Some x, xt) :: ss -> Pi (x, xt, constrType ss)
-        | (None, ty) :: ss -> Pi ("_", ty, constrType ss)
-      Success <| constrType info.signature
-  | ConstrApp (c, args) ->
-    try
-      res {
-        let! argTypes = List.map (typecheck gamma globals) args |> Result.sequence
-        let argSig = List.zip argTypes (List.map snd c.signature)
-        let! matches = List.map (uncurry (equiv globals)) argSig |> Result.sequence_
-        return Datatype c.result
-      }
-    with
-      | :? System.ArgumentException ->
-        sprintf "Wrong number of arguments to %s" c.name
-        |> Failure
+  | Constructor (c, args) ->
+      let rec cType arguments signature =
+        match arguments, signature with
+          | [], ss -> Success <| makePi ss
+          | _, [] -> Failure <| sprintf "Too many arguments for %s." c.name
+          | ar :: ars, (_, s) :: ss -> res {
+              let! arT = typecheck gamma globals ar
+              do! Result.guard (equiv globals arT s)
+              let! newSig = substSignature Z ar ss
+              return! cType ars newSig
+            }
+      and makePi = function
+        | [] -> Datatype c.result
+        | (Some x, xt) :: ss -> Pi (x, xt, makePi ss)
+        | (None, ty) :: ss -> Pi ("_", ty, makePi ss)
+      cType args c.signature
+
