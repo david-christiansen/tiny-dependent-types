@@ -78,7 +78,7 @@ let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
 let evaluate state expr =
   res {
     let! typ = typecheck emptyEnv state.globals expr
-    let! result = eval state.globals expr
+    let! result = normalize state.globals expr
     return (pprintTerm result, pprintTerm typ)
   } |> Result.fold
          (fun (x, y) ->
@@ -147,7 +147,7 @@ and doDefine (s : state) (x : string) (t : term) : state result =
     | None ->
       res {
         let! typ = typecheck emptyEnv s.globals t
-        let! result = eval s.globals t
+        let! result = normalize s.globals t
         return define x result typ s
       }
     | Some (x, tm, tp) ->

@@ -63,34 +63,60 @@ let envWith t = Env (t :: [])
 
 let emptyEnv = Env []
 
-let rec eval (globals : Global.env) = function
-  | Bound n -> Failure "Too high of index on bound var. Parser error?"
+let rec normalize (globals : Global.env) = function
+  | Bound n -> Success <| Bound n
   | Free x -> Global.lookupTerm x globals
-  | Pi (x, ty, body) -> Success <| Pi (x, ty, body)
-  | Lambda (x, ty, body) -> Success <| Lambda (x, ty, body)
-  | Sigma (x, ty, p) -> Success <| Sigma (x, ty, p)
-  | Pair (x, w, prf) -> res {
-      let! w' = eval globals w
-      return Pair (x, w', prf)
+  | Pi (x, ty, body) -> res {
+      let! ty' = normalize globals ty
+      let! body' = normalize globals body
+      return Pi (x, ty', body')
     }
-  | Fst (Pair (x, w, prf)) -> Success w
-  | Fst x -> Failure <| sprintf "Can't take first projection of %s" (pprintTerm x)
-  | Snd (Pair (x, w, prf)) -> Result.bind (eval globals) (subst Z w prf)
-  | Snd x -> Failure <| sprintf "Can't take second projection of %s" (pprintTerm x)
+  | Lambda (x, ty, body) -> res {
+      let! ty' = normalize globals ty
+      let! body' = normalize globals body
+      return Lambda (x, ty', body')
+    }
+  | Sigma (x, ty, p) -> res {
+      let! ty' = normalize globals ty
+      let! p' = normalize globals p
+      return Sigma (x, ty', p')
+    }
+  | Pair (x, w, prf) -> res {
+      let! w' = normalize globals w
+      let! prf' = normalize globals prf
+      return Pair (x, w', prf')
+    }
+  | Fst x -> res {
+      let! x' = normalize globals x
+      let! first =
+        match x' with
+          | (Pair (x, w, prf)) -> Success w
+          | _ -> Failure <| sprintf "Can't take first projection of %s" (pprintTerm x')
+      return first
+    }
+  | Snd x -> res {
+      let! x' = normalize globals x
+      let! second =
+        match x' with
+          | (Pair (x, w, prf)) -> subst Z w prf
+          | _ -> Failure <| sprintf "Can't take second projection of %s" (pprintTerm x')
+      let! second' = normalize globals second
+      return second'
+    }
   | App (t1, t2) -> res {
-      let! fn = eval globals t1
-      let! arg = eval globals t2
+      let! fn = normalize globals t1
+      let! arg = normalize globals t2
       let! result = apply globals fn arg
       return result
     }
   | Univ n -> Success <| Univ n
   | Postulated (str, tp) -> Success <| Postulated (str, tp)
   | Datatype (d, args) -> res {
-      let! args' = Result.mapList (eval globals) args
+      let! args' = Result.mapList (normalize globals) args
       return Datatype (d, args')
     }
   | Constructor (c, args) -> res {
-      let! args' = Result.mapList (eval globals) args
+      let! args' = Result.mapList (normalize globals) args
       return Constructor (c, args')
     }
 
@@ -98,25 +124,25 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
     | Lambda (x, ty, body) -> res {
         let! body' = subst Z t2 body
-        let! result = eval globals body'
+        let! result = normalize globals body'
         return result
       }
     | Pi (x, ty, body) -> res {
         let! body' = subst Z t2 body
-        let! result = eval globals body'
+        let! result = normalize globals body'
         return result
       }
     | Datatype (d, args) -> res {
         do! Result.failIf (d.signature.Length <= args.Length)
               (sprintf "Too many arguments to %s. Typechecker bug?" d.name)
-        let! newArg = eval globals t2
+        let! newArg = normalize globals t2
         let args' = snoc args newArg
         return Datatype (d, args')
       }
     | Constructor (c, args) -> res {
         do! Result.failIf (c.signature.Length <= args.Length)
               (sprintf "Too many arguments to %s. Typechecker bug?" c.name)
-        let! newArg = eval globals t2
+        let! newArg = normalize globals t2
         let args' = snoc args newArg
         return Constructor (c, args')
       }
@@ -177,7 +203,7 @@ and substSignature (n : nat) (t : term) = function
 
 
 let equiv (globals : Global.env) t1 t2 : unit result =
-  if eval globals t1 = eval globals t2
+  if normalize globals t1 = normalize globals t2
   then Success ()
   else Failure <| sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2)
 
@@ -215,24 +241,28 @@ let rec typecheck gamma (globals : Global.env) = function
   | Free x -> Global.lookupType x globals
   | Pi (x, tp, tm) -> res {
       let gamma' = addEnv (shiftUp Z tp) gamma
-      let! bodyType = typecheck gamma' globals tm
+      do! Result.guard (typecheck gamma' globals tm)
       return Univ Z (* TODO: predicativity *)
     }
   | Lambda (x, tp, tm) -> res {
+      let! tp' = normalize globals tp
       let gamma' = addEnv (shiftUp Z tp) gamma
       let! bodyType = typecheck gamma' globals tm
-      return Pi (x, tp, bodyType)
+      let! bodyType' = normalize globals bodyType
+      return Pi (x, tp', bodyType')
     }
   | Sigma (x, ty, p) -> res {
       let gamma' = addEnv (shiftUp Z ty) gamma
-      let! bodyType = typecheck gamma' globals p
+      do! Result.guard(typecheck gamma' globals p)
       return Univ Z (* TODO: predicativity *)
     }
   | Pair (x, w, prf) -> res {
       let! witnessT = typecheck gamma globals w
+      let! witnessT' = normalize globals witnessT
       let gamma' = addEnv (shiftUp Z witnessT) gamma
       let! p = typecheck gamma' globals prf
-      return Sigma (x, witnessT, p)
+      let! p' = normalize globals p
+      return Sigma (x, witnessT', p')
     }
   | Fst p -> res {
       let! pairT = typecheck gamma globals p
@@ -241,18 +271,20 @@ let rec typecheck gamma (globals : Global.env) = function
           | Sigma (x, ty, p) -> Success ty
           | t -> Failure <| sprintf "Cannot take first projection of non-Σ-type %s"
                               (pprintTerm t)
-      return result
+      let! result' = normalize globals result
+      return result'
     }
   | Snd p -> res {
       let! pairT = typecheck gamma globals p
-      let! second' =
+      let! secondT =
         match pairT with
           | Sigma (x, ty, p) -> Success p
           | t -> Failure <| sprintf "Cannot take second projection of non-Σ-type %s"
                               (pprintTerm t)
-      let! first = eval globals (Fst p)
-      let! second = subst Z first second'
-      return second
+      let! first = normalize globals (Fst p)
+      let! secondT' = subst Z first secondT
+      let! secondT'' = normalize globals secondT'
+      return secondT''
     }
   | App (t1, t2) -> res {
       let! tp1 = typecheck gamma globals t1
@@ -267,7 +299,7 @@ let rec typecheck gamma (globals : Global.env) = function
       return t'
     }
   | Univ n -> Success <| Univ (S n)
-  | Postulated (_, t) -> Success t
+  | Postulated (_, t) -> normalize globals t
   | Datatype (d, args) ->
       cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
