@@ -183,7 +183,7 @@ let startState : state =
   (* Temporary hack until parsing works *)
   let natT : datatype = {name = "Nat"; signature = []}
   let natZ : construct = {name = "Z" ; signature = [] ; result = (natT, [])}
-  let natS : construct = {name = "S" ; signature = [(None, Free "Nat")] ; result = (natT, []) }
+  let natS : construct = {name = "S" ; signature = [("n", Free "Nat")] ; result = (natT, []) }
 
   let natState = addInductive emptyState natT [natZ ; natS]
                  |> Result.fold id
@@ -193,24 +193,24 @@ let startState : state =
   let leaf : construct = {name = "Leaf" ; signature = [] ; result = (treeT, [])}
   let branch : construct = {
       name = "Branch"
-      signature = [(None, Free "Tree"); (None, Free "Tree")]
+      signature = [("t1", Free "Tree"); ("t2", Free "Tree")]
       result = (treeT, [])
     }
   let treeState = addInductive natState treeT [leaf ; branch]
                  |> Result.fold id
                       (fun err -> printfn "Couldn't add Tree: %s" err ; natState)
 
-  let listT : datatype = {name = "List" ; signature = [(Some "A", Univ Z)]}
+  let listT : datatype = {name = "List" ; signature = [("A", Univ Z)]}
   let nilC : construct = {
     name = "Nil"
-    signature = [(Some "A", Univ Z)]
+    signature = [("A", Univ Z)]
     result = (listT, [Bound Z])
   }
   let consC : construct = {
     name = "Cons"
-    signature = [ (Some "A", Univ Z)
-                ; (Some "a", Bound Z)
-                ; (Some "as", App (Free "List", Bound (S Z)))
+    signature = [ ("A", Univ Z)
+                ; ("a", Bound Z)
+                ; ("as", App (Free "List", Bound (S Z)))
                 ]
     result = (listT, [Bound (S (S Z))])
   }
@@ -221,15 +221,15 @@ let startState : state =
 
   let idT : datatype = {
     name = "Id"
-    signature = [ (Some "A", Univ Z)
-                ; (Some "a", Bound Z)
-                ; (Some "a'", Bound (S Z))
+    signature = [ ("A", Univ Z)
+                ; ("a", Bound Z)
+                ; ("a'", Bound (S Z))
                 ]
   }
   let reflC : construct = {
     name = "refl"
-    signature = [ (Some "A", Univ Z)
-                ; (Some "a", Bound Z)
+    signature = [ ("A", Univ Z)
+                ; ("a", Bound Z)
                 ]
     result = (idT, [Bound (S Z); Bound Z; Bound Z])
   }

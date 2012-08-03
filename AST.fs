@@ -47,12 +47,12 @@ type term =
 
 and datatype = {
     name : string
-    signature : (string option * term) list
+    signature : (string * term) list
   }
 
 and construct = {
     name : string
-    signature : (string option * term) list
+    signature : (string * term) list
     result : (datatype * term list)
   }
 

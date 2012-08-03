@@ -276,8 +276,7 @@ let rec typecheck gamma (globals : Global.env) = function
 and cType name gamma globals arguments signature result =
   let rec makePi result = function
     | [] -> result
-    | (Some x, xt) :: ss -> Pi (x, xt, makePi result ss)
-    | (None, ty) :: ss -> Pi ("_", ty, makePi result ss)
+    | (x, xt) :: ss -> Pi (x, xt, makePi result ss)
   match arguments, signature with
     | [], ss -> Success <| makePi result ss
     | _, [] -> Failure <| sprintf "Too many arguments for %s." name

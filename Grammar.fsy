@@ -56,8 +56,7 @@ and fixConstr ctx (info : construct) : construct = {
   }
 and fixSigVars (ctx : string list) = function
   | [] -> []
-  | (None, t) :: rest -> (None, fixVars' ctx t) :: fixSigVars ("_"::ctx) rest
-  | (Some x, t) :: rest -> (Some x, fixVars' ctx t) :: fixSigVars (x::ctx) rest
+  | (x, t) :: rest -> (x, fixVars' ctx t) :: fixSigVars (x::ctx) rest
 %}
 
 %token <string> ID
