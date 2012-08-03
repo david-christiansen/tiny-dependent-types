@@ -57,6 +57,8 @@ module Result =
       | Success a -> Failure <| err a
       | Failure msg -> Failure msg
 
+  let guard (cond : 'a result) : unit result = map (fun _ -> ()) cond
+
   let failIf (cond : bool) (err : string) : unit result =
     if cond then Failure err else Success ()
 

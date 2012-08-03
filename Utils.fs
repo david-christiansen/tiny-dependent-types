@@ -8,3 +8,8 @@ let rec snoc xs x =
   match xs with
     | [] -> [x]
     | y :: ys -> y :: (snoc ys x)
+
+let gensymCounter = ref -1
+let gensym () =
+  gensymCounter := !gensymCounter + 1
+  sprintf "%%gen%i" !gensymCounter

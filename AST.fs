@@ -42,8 +42,7 @@ type term =
   | Univ of nat
   | Postulated of string * term
   | Datatype of datatype
-  | Constructor of construct
-  | ConstrApp of construct * (term list)
+  | Constructor of construct * (term list)
 
 and datatype = {
     name : string
@@ -102,8 +101,8 @@ and pprintTerm' t ctx =
     | Univ n -> "Set" + subscriptStringOf (sprintf "%i" (intOfNat n))
     | Postulated (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
     | Datatype {name = n} -> n
-    | Constructor {name = n} -> n
-    | ConstrApp (c, args) ->
+    | Constructor (c, []) -> c.name
+    | Constructor (c, args) ->
         "(" + c.name + " " +
         (List.map (fun arg -> pprintTerm' arg ctx) args
          |> List.reduce (fun x y -> x + " " + y)) +

@@ -158,7 +158,7 @@ let addInductive (s : state) (t : datatype) (cs : construct list) : state result
   let defineConstr (s : state) (c : construct) : state result =
     res {
       let name = c.name
-      let tm = Constructor c
+      let tm = Constructor (c, [])
       let! s' = defineCheck name tm s
       return s'
     }
