@@ -219,7 +219,26 @@ let startState : state =
                   |> Result.fold id
                       (fun err -> printfn "Couldn't add List: %s" err ; treeState)
 
-  loadFile listState "prelude"
+  let idT : datatype = {
+    name = "Id"
+    signature = [ (Some "A", Univ Z)
+                ; (Some "a", Bound Z)
+                ; (Some "a'", Bound (S Z))
+                ]
+  }
+  let reflC : construct = {
+    name = "refl"
+    signature = [ (Some "A", Univ Z)
+                ; (Some "a", Bound Z)
+                ]
+    result = (idT, [Bound (S Z); Bound Z; Bound Z])
+  }
+
+  let idState = addInductive listState idT [reflC]
+                  |> Result.fold id
+                      (fun err -> printfn "Couldn't add List: %s" err ; listState)
+
+  loadFile idState "prelude"
   |> Result.fold (id)
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
                    emptyState)
