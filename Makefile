@@ -13,8 +13,8 @@ getline.dll: getline.cs
 Nat.dll: Nat.fs
 	$(FSC) $(LIBFLAGS) $(FLAGS) Nat.fs
 
-AST.dll: AST.fs Nat.dll
-	$(FSC) $(LIBFLAGS) $(FLAGS) -r Nat.dll AST.fs
+AST.dll: AST.fs Nat.dll Utils.dll
+	$(FSC) $(LIBFLAGS) $(FLAGS) -r Nat.dll -r Utils.dll AST.fs
 
 Lexical.fs: Lexical.fsl Grammar.dll
 	$(FSLEX) --unicode Lexical.fsl

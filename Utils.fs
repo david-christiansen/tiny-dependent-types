@@ -13,3 +13,6 @@ let gensymCounter = ref -1
 let gensym () =
   gensymCounter := !gensymCounter + 1
   sprintf "%%gen%i" !gensymCounter
+
+let join (sep : string) (strs : string list) : string =
+  List.reduce (fun x y -> x + sep + y) strs

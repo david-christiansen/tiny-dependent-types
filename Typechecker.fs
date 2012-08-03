@@ -85,7 +85,10 @@ let rec eval (globals : Global.env) = function
     }
   | Univ n -> Success <| Univ n
   | Postulated (str, tp) -> Success <| Postulated (str, tp)
-  | Datatype d -> Success <| Datatype d
+  | Datatype (d, args) -> res {
+      let! args' = Result.mapList (eval globals) args
+      return Datatype (d, args')
+    }
   | Constructor (c, args) -> res {
       let! args' = Result.mapList (eval globals) args
       return Constructor (c, args')
@@ -148,13 +151,16 @@ and subst (n : nat) (t : term) (subject : term) : term result =
       }
     | Univ n -> Success <| Univ n
     | Postulated (str, tp) -> Success <| Postulated (str, tp)
-    | Datatype d -> Success <| Datatype d
-    | Constructor (c, args) ->
-        res {
-          let! args' = Result.mapList (subst n t) args
-          let! newSig = substSignature n t c.signature
-          return Constructor ({c with signature = newSig}, args')
-        }
+    | Datatype (d, args) -> res {
+        let! args' = Result.mapList (subst n t) args
+        let! newSig = substSignature n t d.signature
+        return Datatype ({d with signature = newSig}, args')
+      }
+    | Constructor (c, args) -> res {
+        let! args' = Result.mapList (subst n t) args
+        let! newSig = substSignature n t c.signature
+        return Constructor ({c with signature = newSig}, args')
+      }
 and substSignature (n : nat) (t : term) = function
   | [] -> Success []
   | (x, ty) :: rest -> res {
@@ -189,7 +195,9 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
     | App (t1, t2) -> App (shiftUp cutoff t1, shiftUp cutoff t2)
     | Univ n -> Univ n
     | Postulated (str, tp) -> Postulated (str, tp)
-    | Datatype d -> Datatype d
+    | Datatype (d, args) ->
+        let d' = {d with signature = shiftSignature cutoff d.signature}
+        Datatype (d', List.map (shiftUp cutoff) args)
     | Constructor (c, args) ->
         let c' = {c with signature = shiftSignature cutoff c.signature}
         Constructor (c', List.map (shiftUp cutoff) args)
@@ -254,21 +262,25 @@ let rec typecheck gamma (globals : Global.env) = function
     }
   | Univ n -> Success <| Univ (S n)
   | Postulated (_, t) -> Success t
-  | Datatype d -> Success <| Univ Z (* TODO: predicativity *)
+  | Datatype (d, args) ->
+      cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
-      let rec cType arguments signature =
-        match arguments, signature with
-          | [], ss -> Success <| makePi ss
-          | _, [] -> Failure <| sprintf "Too many arguments for %s." c.name
-          | ar :: ars, (_, s) :: ss -> res {
-              let! arT = typecheck gamma globals ar
-              do! Result.guard (equiv globals arT s)
-              let! newSig = substSignature Z ar ss
-              return! cType ars newSig
-            }
-      and makePi = function
-        | [] -> Datatype c.result
-        | (Some x, xt) :: ss -> Pi (x, xt, makePi ss)
-        | (None, ty) :: ss -> Pi ("_", ty, makePi ss)
-      cType args c.signature
+      cType c.name gamma globals args c.signature (Datatype c.result)
+
+and cType name gamma globals arguments signature result =
+  let rec makePi result = function
+    | [] -> result
+    | (Some x, xt) :: ss -> Pi (x, xt, makePi result ss)
+    | (None, ty) :: ss -> Pi ("_", ty, makePi result ss)
+  match arguments, signature with
+    | [], ss -> Success <| makePi result ss
+    | _, [] -> Failure <| sprintf "Too many arguments for %s." name
+    | ar :: ars, (_, s) :: ss -> res {
+        let! arT = typecheck gamma globals ar
+        do! Result.guard (equiv globals arT s)
+        let! newSig = substSignature Z ar ss
+        return! cType name gamma globals ars newSig result
+      }
+
+
 

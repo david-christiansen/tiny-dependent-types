@@ -27,6 +27,7 @@ furnished to do so, subject to the following conditions:
 module AST
 
 open Nat
+open Utils
 
 
 type term =
@@ -41,17 +42,18 @@ type term =
   | App of term * term
   | Univ of nat
   | Postulated of string * term
-  | Datatype of datatype
+  | Datatype of datatype * (term list)
   | Constructor of construct * (term list)
 
 and datatype = {
     name : string
+    signature : (string option * term) list
   }
 
 and construct = {
     name : string
     signature : (string option * term) list
-    result : datatype
+    result : (datatype * term list)
   }
 
 type case = Case of (string * term)
@@ -129,10 +131,14 @@ and pprintTerm' t ctx =
     | Univ Z -> "Set"
     | Univ n -> "Set" + subscriptStringOf (sprintf "%i" (intOfNat n))
     | Postulated (str, tp) -> "%" + str + ":(" + pprintTerm tp + ")%"
-    | Datatype {name = n} -> n
+    | Datatype ({name = n}, []) -> n
+    | Datatype ({name = n}, args) ->
+        "(" + n + " " +
+        (List.map (fun arg -> pprintTerm' arg ctx) args
+         |> join " ") + ")"
     | Constructor (c, []) -> c.name
     | Constructor (c, args) ->
         "(" + c.name + " " +
         (List.map (fun arg -> pprintTerm' arg ctx) args
-         |> List.reduce (fun x y -> x + " " + y)) +
+         |> join " ") +
         ")"

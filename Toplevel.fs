@@ -171,7 +171,7 @@ let addInductive (s : state) (t : datatype) (cs : construct list) : state result
           return s''
         }
   res {
-    let! withType = defineCheck t.name (Datatype t) s
+    let! withType = defineCheck t.name (Datatype (t, [])) s
     let! withConstrs = defineConstrs withType cs
     return withConstrs
   }
@@ -181,26 +181,45 @@ let startState : state =
 
 
   (* Temporary hack until parsing works *)
-  let natT : datatype = {name = "Nat"}
-  let natZ : construct = {name = "Z" ; signature = [] ; result = natT}
-  let natS : construct = {name = "S" ; signature = [(None, Free "Nat")] ; result = natT }
+  let natT : datatype = {name = "Nat"; signature = []}
+  let natZ : construct = {name = "Z" ; signature = [] ; result = (natT, [])}
+  let natS : construct = {name = "S" ; signature = [(None, Free "Nat")] ; result = (natT, []) }
 
   let natState = addInductive emptyState natT [natZ ; natS]
                  |> Result.fold id
                       (fun err -> printfn "Couldn't add Nat: %s" err ; emptyState)
 
-  let treeT : datatype = {name = "Tree"}
-  let leaf : construct = {name = "Leaf" ; signature = [] ; result = treeT}
+  let treeT : datatype = {name = "Tree" ; signature = []}
+  let leaf : construct = {name = "Leaf" ; signature = [] ; result = (treeT, [])}
   let branch : construct = {
       name = "Branch"
       signature = [(None, Free "Tree"); (None, Free "Tree")]
-      result = treeT
+      result = (treeT, [])
     }
   let treeState = addInductive natState treeT [leaf ; branch]
                  |> Result.fold id
                       (fun err -> printfn "Couldn't add Tree: %s" err ; natState)
 
-  loadFile treeState "prelude"
+  let listT : datatype = {name = "List" ; signature = [(Some "A", Univ Z)]}
+  let nilC : construct = {
+    name = "Nil"
+    signature = [(Some "A", Univ Z)]
+    result = (listT, [Bound Z])
+  }
+  let consC : construct = {
+    name = "Cons"
+    signature = [ (Some "A", Univ Z)
+                ; (Some "a", Bound Z)
+                ; (Some "as", Datatype (listT, [Bound (S Z)]))
+                ]
+    result = (listT, [Bound (S (S Z))])
+  }
+
+  let listState = addInductive treeState listT [nilC ; consC]
+                  |> Result.fold id
+                      (fun err -> printfn "Couldn't add List: %s" err ; treeState)
+
+  loadFile listState "prelude"
   |> Result.fold (id)
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
                    emptyState)
