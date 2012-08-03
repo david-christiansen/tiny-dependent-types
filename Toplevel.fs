@@ -210,7 +210,7 @@ let startState : state =
     name = "Cons"
     signature = [ (Some "A", Univ Z)
                 ; (Some "a", Bound Z)
-                ; (Some "as", Datatype (listT, [Bound (S Z)]))
+                ; (Some "as", App (Free "List", Bound (S Z)))
                 ]
     result = (listT, [Bound (S (S Z))])
   }

@@ -106,10 +106,16 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let! result = eval globals body'
         return result
       }
+    | Datatype (d, args) -> res {
+        do! Result.failIf (d.signature.Length <= args.Length)
+              (sprintf "Too many arguments to %s. Typechecker bug?" d.name)
+        let! newArg = eval globals t2
+        let args' = snoc args newArg
+        return Datatype (d, args')
+      }
     | Constructor (c, args) -> res {
-        let! x =
-          Result.failIf (c.signature.Length <= args.Length)
-            (sprintf "Too many arguments to %s. Typechecker bug?" c.name)
+        do! Result.failIf (c.signature.Length <= args.Length)
+              (sprintf "Too many arguments to %s. Typechecker bug?" c.name)
         let! newArg = eval globals t2
         let args' = snoc args newArg
         return Constructor (c, args')
