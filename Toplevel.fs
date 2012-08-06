@@ -175,7 +175,7 @@ let addInductive (s : state) (t : datatype) (cs : construct list) : state result
   res {
     let! withType = defineCheck t.name (Datatype (t, [])) s
     let! withConstrs = defineConstrs withType cs
-    let! withElim = defineCheck (t.name + "Elim") (Ind (t, cs)) withConstrs
+    let! withElim = defineCheck (t.name + "Elim") (Ind (t, cs, [])) withConstrs
     return withElim
   }
 

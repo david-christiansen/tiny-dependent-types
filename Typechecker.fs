@@ -119,7 +119,10 @@ let rec normalize (globals : Global.env) = function
       let! args' = Result.mapList (normalize globals) args
       return Constructor (c, args')
     }
-  | Ind (d, cs) -> Success <| Ind (d, cs)
+  | Ind (d, cs, args) -> res {
+      let! args' = Result.mapList (normalize globals) args
+      return Ind (d, cs, args') (* TODO: Actually run when all args present *)
+    }
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
@@ -147,7 +150,12 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let args' = snoc args newArg
         return Constructor (c, args')
       }
-    | Ind (d, cs) -> Failure "TODO: Application of eliminators"
+    | Ind (d, cs, args) -> res {
+        do! Result.failIf (args.Length >= cs.Length + 2) ("Too many args to eliminator.")
+        let! newArg = normalize globals t2
+        let args' = snoc args newArg
+        return Ind (d, cs, args')
+      }
     | _ -> Failure "Can only apply lambda or pi"
 
 (* Substitute t for the bound var with index n in subject *)
@@ -195,7 +203,17 @@ and subst (n : nat) (t : term) (subject : term) : term result =
         let! newSig = substSignature n t c.signature
         return Constructor ({c with signature = newSig}, args')
       }
-    | Ind (d, cs) -> Success <| Ind (d, cs)
+    | Ind (d, cs, args) -> res {
+        let! args' = Result.mapList (subst n t) args
+        let! newDSig = substSignature n t d.signature
+        let! newCs =
+          Result.mapList
+            (fun (c : construct) ->
+               Result.map (fun sig' -> {c with signature = sig'})
+                  <| substSignature n t c.signature)
+            cs
+        return Ind ({d with signature = newDSig}, newCs, args')
+      }
 and substSignature (n : nat) (t : term) = function
   | [] -> Success []
   | (x, ty) :: rest -> res {
@@ -236,7 +254,13 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
     | Constructor (c, args) ->
         let c' = {c with signature = shiftSignature cutoff c.signature}
         Constructor (c', List.map (shiftUp cutoff) args)
-    | Ind (d, cs) -> Ind (d, cs)
+    | Ind (d, cs, args) ->
+        let d' = {d with signature = shiftSignature cutoff d.signature}
+        let cs' =
+          List.map (fun (c : construct) ->
+                    {c with signature = shiftSignature cutoff c.signature})
+                   cs
+        Ind (d', cs', List.map (shiftUp cutoff) args)
 
 
 
@@ -308,7 +332,7 @@ let rec typecheck gamma (globals : Global.env) = function
       cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
       cType c.name gamma globals args c.signature (Datatype c.result)
-  | Ind (d, cs) -> Success <| Induction.elimType d cs
+  | Ind (d, cs, args) -> Success <| Induction.elimType d cs
 
 and cType name gamma globals arguments signature result =
   let rec makePi result = function
@@ -323,6 +347,7 @@ and cType name gamma globals arguments signature result =
         let! newSig = substSignature Z ar ss
         return! cType name gamma globals ars newSig result
       }
+
 
 
 
