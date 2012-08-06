@@ -45,6 +45,7 @@ and fixVars' ctx t =
     | Postulated (x, ty) -> Postulated (x, ty)
     | Datatype (d, args) -> Datatype (fixDatatype ctx d, List.map (fixVars' ctx) args)
     | Constructor (c, args) -> Constructor (fixConstr ctx c, List.map (fixVars' ctx) args)
+    | Ind (d, cs) -> Ind (d, cs)
 and fixDatatype ctx (info : datatype) : datatype = {
     info with signature = fixSigVars ctx info.signature
   }

@@ -129,7 +129,7 @@ let printLex input =
         | tok -> yield tok
   }
   |> Seq.map printToken
-  |> Seq.reduce (fun x y -> x + ", " + y)
+  |> Seq.fold (fun x y -> x + ", " + y) ""
   |> printf "Lexer result: %s\n"
 
 }

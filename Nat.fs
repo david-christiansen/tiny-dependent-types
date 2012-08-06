@@ -54,3 +54,7 @@ let rec (@+) (n : nat) (m : nat) =
 
 let rec max (n : nat) (m : nat) =
   if n @<= m then m else n
+
+let pred = function
+  | Z -> None
+  | S n -> Some n

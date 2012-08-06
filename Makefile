@@ -4,8 +4,8 @@ FSYACC=fsyacc
 FLAGS=-r FSharp.PowerPack.dll --utf8output
 LIBFLAGS=--target:library
 
-Toplevel.exe: Toplevel.fs AST.dll Lexical.dll Grammar.dll Result.dll Typechecker.dll Utils.dll getline.dll
-	$(FSC) $(FLAGS) -r Lexical.dll -r Grammar.dll -r AST.dll -r Result.dll -r Typechecker.dll -r Utils.dll -r getline.dll Toplevel.fs
+Toplevel.exe: Toplevel.fs AST.dll Lexical.dll Grammar.dll Result.dll Induction.dll Typechecker.dll Utils.dll getline.dll
+	$(FSC) $(FLAGS) -r Lexical.dll -r Grammar.dll -r AST.dll -r Result.dll -r Typechecker.dll -r Induction.dll -r Utils.dll -r getline.dll Toplevel.fs
 
 getline.dll: getline.cs
 	gmcs -target:library getline.cs
@@ -34,8 +34,11 @@ Result.dll: Result.fs
 Utils.dll : Utils.fs
 	$(FSC) $(LIBFLAGS) $(FLAGS) Utils.fs
 
-Typechecker.dll : Typechecker.fs AST.dll Result.dll Utils.dll
-	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll -r Utils.dll Typechecker.fs
+Typechecker.dll : Typechecker.fs AST.dll Result.dll Utils.dll Induction.dll
+	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll -r Utils.dll -r Induction.dll Typechecker.fs
+
+Induction.dll: Induction.fs Utils.dll Nat.dll AST.dll Result.dll Grammar.dll
+	 $(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll -r Grammar.dll -r Utils.dll -r Nat.dll Induction.fs
 
 clean:
 	rm *.dll

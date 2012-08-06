@@ -15,7 +15,9 @@ let gensym () =
   sprintf "%%gen%i" !gensymCounter
 
 let join (sep : string) (strs : string list) : string =
-  List.reduce (fun x y -> x + sep + y) strs
+  match strs with
+    | [] -> ""
+    | xs -> List.reduce (fun x y -> x + sep + y) xs
 
 module List =
   let rec zip' (xs : 'a list) (ys : 'b list) : ('a * 'b) list =

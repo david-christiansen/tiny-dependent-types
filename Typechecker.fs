@@ -119,6 +119,7 @@ let rec normalize (globals : Global.env) = function
       let! args' = Result.mapList (normalize globals) args
       return Constructor (c, args')
     }
+  | Ind (d, cs) -> Success <| Ind (d, cs)
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
   match t1 with
@@ -146,6 +147,7 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let args' = snoc args newArg
         return Constructor (c, args')
       }
+    | Ind (d, cs) -> Failure "TODO: Application of eliminators"
     | _ -> Failure "Can only apply lambda or pi"
 
 (* Substitute t for the bound var with index n in subject *)
@@ -193,6 +195,7 @@ and subst (n : nat) (t : term) (subject : term) : term result =
         let! newSig = substSignature n t c.signature
         return Constructor ({c with signature = newSig}, args')
       }
+    | Ind (d, cs) -> Success <| Ind (d, cs)
 and substSignature (n : nat) (t : term) = function
   | [] -> Success []
   | (x, ty) :: rest -> res {
@@ -233,6 +236,7 @@ let rec shiftUp (cutoff : nat) (subject : term) : term =
     | Constructor (c, args) ->
         let c' = {c with signature = shiftSignature cutoff c.signature}
         Constructor (c', List.map (shiftUp cutoff) args)
+    | Ind (d, cs) -> Ind (d, cs)
 
 
 
@@ -304,6 +308,7 @@ let rec typecheck gamma (globals : Global.env) = function
       cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
       cType c.name gamma globals args c.signature (Datatype c.result)
+  | Ind (d, cs) -> Success <| Induction.noMethods d (* TODO: Correct type*)
 
 and cType name gamma globals arguments signature result =
   let rec makePi result = function

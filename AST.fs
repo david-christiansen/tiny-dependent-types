@@ -44,6 +44,7 @@ type term =
   | Postulated of string * term
   | Datatype of datatype * (term list)
   | Constructor of construct * (term list)
+  | Ind of datatype * (construct list)
 
 and datatype = {
     name : string
@@ -97,10 +98,11 @@ let rec usesBinding n t =
     | Postulated _ -> false
     | Datatype (_, args) ->
         List.map (usesBinding n) args
-        |> List.reduce (||)
+        |> List.fold (||) false
     | Constructor (_, args) ->
         List.map (usesBinding n) args
-        |> List.reduce (||)
+        |> List.fold (||) false
+    | Ind (d, c) -> false
 
 
 let rec pprintTerm t = pprintTerm' t []
@@ -144,4 +146,5 @@ and pprintTerm' t ctx =
         (List.map (fun arg -> pprintTerm' arg ctx) args
          |> join " ") +
         ")"
+    | Ind (d, _) -> "[" + d.name + "-" + "elim" + "]"
 
