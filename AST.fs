@@ -105,28 +105,45 @@ let rec usesBinding n t =
     | Ind (d, c) -> false
 
 
+
 let rec pprintTerm t = pprintTerm' t []
 and pprintTerm' t ctx =
+  let rec uniquify name ctx =
+    if List.exists (fun x -> x = name) ctx
+    then uniquify (name + "'") ctx
+    else name
+  let addToCtx x ctx =
+    let x' = uniquify x ctx
+    (x', x' :: ctx)
+  let addDummy ctx = "" :: ctx
   match t with
     | Bound n -> ctx.Item(intOfNat n)
     | Free str -> "`" + str + "`"
     | Pi (x, t1, t2) when not (usesBinding Z t2) ->
         "(" + pprintTerm' t1 ctx +
-        " → " + pprintTerm' t2 (""::ctx) + ")"
-    | Pi (x, t1, t2) -> "Π" + x + ":" + pprintTerm' t1 ctx +
-                        "." + pprintTerm' t2 (x::ctx)
-    | Lambda (x, t1, t2) -> "λ" + x + ":" + pprintTerm' t1 ctx +
-                            "." + pprintTerm' t2 (x::ctx)
+        " → " + pprintTerm' t2 (addDummy ctx) + ")"
+    | Pi (x, t1, t2) ->
+        let (x', ctx') = addToCtx x ctx
+        "Π" + x' + ":" + pprintTerm' t1 ctx +
+        "." + pprintTerm' t2 ctx'
+    | Lambda (x, t1, t2) ->
+        let (x', ctx') = addToCtx x ctx
+        "λ" + x' + ":" + pprintTerm' t1 ctx +
+        "." + pprintTerm' t2 ctx'
     | Sigma (_, ty, p) when not (usesBinding Z p) ->
         "(" + pprintTerm' ty ctx +
-        " × " + pprintTerm' p (""::ctx) + ")"
-    | Sigma (x, ty, p) -> "Σ" + x + ":" + pprintTerm' ty ctx +
-                          "." + pprintTerm' p (x::ctx)
+        " × " + pprintTerm' p (addDummy ctx) + ")"
+    | Sigma (x, ty, p) ->
+        let (x', ctx') = addToCtx x ctx
+        "Σ" + x' + ":" + pprintTerm' ty ctx +
+        "." + pprintTerm' p ctx'
     | Pair (_, a, b) when not (usesBinding Z b) ->
-        "{" + pprintTerm' a ctx + " ; " + pprintTerm' b (""::ctx) + "}"
-    | Pair (x, w, prf) -> "{" + x + "|" +
-                          pprintTerm' w ctx + ";" +
-                          pprintTerm' prf (x::ctx) + "}"
+        "{" + pprintTerm' a ctx + " ; " + pprintTerm' b (addDummy ctx) + "}"
+    | Pair (x, w, prf) ->
+        let (x', ctx') = addToCtx x ctx
+        "{" + x' + "|" +
+        pprintTerm' w ctx + ";" +
+        pprintTerm' prf ctx' + "}"
     | Fst t' -> "fst " + pprintTerm' t' ctx
     | Snd t' -> "snd " + pprintTerm' t' ctx
     | App (t1, t2) -> "(" + pprintTerm' t1 ctx + ") " +
