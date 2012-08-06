@@ -308,7 +308,7 @@ let rec typecheck gamma (globals : Global.env) = function
       cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
       cType c.name gamma globals args c.signature (Datatype c.result)
-  | Ind (d, cs) -> Success <| Induction.noMethods d (* TODO: Correct type*)
+  | Ind (d, cs) -> Success <| Induction.elimType d cs
 
 and cType name gamma globals arguments signature result =
   let rec makePi result = function
