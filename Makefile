@@ -37,7 +37,7 @@ Utils.dll : Utils.fs
 Typechecker.dll : Typechecker.fs AST.dll Result.dll Utils.dll Induction.dll
 	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll -r Utils.dll -r Induction.dll Typechecker.fs
 
-Induction.dll: Induction.fs Utils.dll Nat.dll AST.dll Result.dll Grammar.dll
+Induction.dll: Induction.fs Induction.fsi Utils.dll Nat.dll AST.dll Result.dll Grammar.dll
 	 $(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Result.dll -r Grammar.dll -r Utils.dll -r Nat.dll Induction.fs
 
 clean:
