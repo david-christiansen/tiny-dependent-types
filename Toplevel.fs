@@ -112,7 +112,7 @@ and handleCmd (s : state) (cmd : command) : state result =
     | ShowState -> showState s ; Success s
     | Load x -> printfn "loading %A..." x ;
                 loadFile s x
-    | DataDef (x,y,z) -> printfn "%A -- %A -- %A" x y z; Success s
+    | DataDef (x,args,y,z) -> printfn "%A -- %A -- %A -- %A" x args y z; Success s
     | Def (x, t) -> doDefine s x t
     | ToggleDebug -> printfn "Debugging is now %s" (if not s.debug then "ON" else "OFF") ;
                      Success {s with debug = not s.debug}

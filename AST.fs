@@ -63,7 +63,7 @@ type command =
   | Eval of term
   | Postulate of (string * term)
   | ShowState
-  | DataDef of (string * term * case list)
+  | DataDef of (string * (string * term) list * term * case list)
   | Def of (string * term)
   | Load of string
   | ToggleDebug

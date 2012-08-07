@@ -61,6 +61,13 @@ and fixConstr ctx (info : construct) : construct = {
 and fixSigVars (ctx : string list) = function
   | [] -> []
   | (x, t) :: rest -> (x, fixVars' ctx t) :: fixSigVars (x::ctx) rest
+
+let mkDataDef (name : string) (args : (string * term) list) (t : term) (cases : case list) : command =
+  let rec fixArgs ctx = function
+    | [] -> []
+    | (x, tp) :: args -> (x, fixVars' ctx tp) :: fixArgs (x::ctx) args
+  let fixedT = fixVars' (List.map fst args) t
+  DataDef (name, fixArgs [] args, fixedT, cases)
 %}
 
 %token <string> ID
@@ -97,7 +104,7 @@ file_cmd:
   | exprTop                            { Eval $1              }
   | CMD_POSTULATE ID COLON exprTop     { Postulate ($2, $4)   }
   | CMD_LOAD filename                  { Load $2              }
-  | CMD_DATADEF ID COLON exprTop cases { DataDef ($2, $4, $5) }
+  | CMD_DATADEF ID dataArgs COLON exprTop cases { mkDataDef $2 $3 $5 $6 }
   | CMD_DEF ID MAKE_EQUAL exprTop      { Def ($2, $4)         }
 
 file:
@@ -109,6 +116,12 @@ cases:
   | case cases                      { $1 :: $2             }
 case:
   | PIPE ID COLON expr              { Case ($2, $4)        }
+
+dataArg:
+  | LPAR ID COLON exprTop RPAR      { ($2, $4)             }
+dataArgs:
+  |                                 { []                   }
+  | dataArg dataArgs                { $1 :: $2             }
 
 filename:
   | STRING                          { $1                   }
