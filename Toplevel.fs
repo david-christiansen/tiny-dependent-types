@@ -182,15 +182,21 @@ let addInductive (s : state) (t : datatype) (cs : construct list) : state result
 let startState : state =
   let emptyState = {globals = Global.empty ; debug = false}
 
+  let unitT : datatype = {name = "Unit" ; signature = []}
+  let un : construct = {name = "unit" ; signature = []; result = (unitT, [])}
+
+  let unitState = addInductive emptyState unitT [un]
+                  |> Result.fold id
+                      (fun err -> printfn "Couldn't add Unit: %s" err ; emptyState)
 
   (* Temporary hack until parsing works *)
   let natT : datatype = {name = "Nat"; signature = []}
   let natZ : construct = {name = "Z" ; signature = [] ; result = (natT, [])}
   let natS : construct = {name = "S" ; signature = [("n", Free "Nat")] ; result = (natT, []) }
 
-  let natState = addInductive emptyState natT [natZ ; natS]
+  let natState = addInductive unitState natT [natZ ; natS]
                  |> Result.fold id
-                      (fun err -> printfn "Couldn't add Nat: %s" err ; emptyState)
+                      (fun err -> printfn "Couldn't add Nat: %s" err ; unitState)
 
   let treeT : datatype = {name = "Tree" ; signature = []}
   let leaf : construct = {name = "Leaf" ; signature = [] ; result = (treeT, [])}
