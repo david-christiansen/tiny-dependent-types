@@ -89,6 +89,11 @@ module Result =
   let mapList (f : 'a -> 'b result) (rs : 'a list) : 'b list result =
     sequence (List.map f rs)
 
+  let rec foldList (f : 'a -> 'b -> 'b result) (start : 'b result) (xs : 'a list) : 'b result =
+    match xs with
+      | [] -> start
+      | y :: ys -> foldList f (bind (f y) start) ys
+
 type ResultBuilder () =
   member x.Bind(v, f) = Result.bind f v
   member x.Return(v) = Success v

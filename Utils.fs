@@ -4,6 +4,8 @@ let curry (f : ('a * 'b) -> 'c) = fun a -> fun b -> f (a, b)
 
 let uncurry (f : 'a -> 'b -> 'c) = fun (a, b) -> f a b
 
+let flip (f : 'a -> 'b -> 'c) : 'b -> 'a -> 'c = fun b a -> f a b
+
 let rec snoc xs x =
   match xs with
     | [] -> [x]
@@ -25,3 +27,12 @@ module List =
       | [], _ -> []
       | _, [] -> []
       | x :: xs', y :: ys' -> (x, y) :: zip' xs' ys'
+
+  let rec drop (n : int) (xs : 'a list) : 'a list =
+    if n < 0
+    then raise (System.ArgumentOutOfRangeException (sprintf "drop requires n >= 0, got %A" n))
+    else match xs with
+           | [] -> []
+           | y :: ys when n = 0 -> y :: ys
+           | y :: ys -> drop (n - 1) ys
+

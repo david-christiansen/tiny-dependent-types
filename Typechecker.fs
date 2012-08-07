@@ -155,15 +155,31 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let! newArg = normalize globals t2
         let args' = snoc args newArg
         if args'.Length = numIndArgs d cs
-          then return! doInduction d cs args'
+          then return! doInduction globals d cs args'
           else return Ind (d, cs, args')
       }
     | _ -> Success <| App (t1, t2)
 
-and doInduction (d : datatype) (cs : construct list) (args : term list) : term result =
+and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (args : term list) : term result =
   if args.Length <> numIndArgs d cs
   then Failure "Type check error - wrong nr. args to eliminator"
-  else Failure "TODO"
+  else res {
+    let (Constructor (c, cArgs) :: more) = args // subject
+    let more' = List.drop (d.signature.Length) more // targets
+    let (motive :: methods) = more' // motive
+
+    (* select method *)
+    let meth = methods.Item(List.findIndex (fun c' -> c = c') cs)
+
+    (* recurse on constr args *)
+    let! cArgs' = Result.mapList (function
+        | Constructor (c', a') ->
+            doInduction globals d cs (Constructor (c', a') :: more)
+        | x -> Success x) cArgs
+
+    (* finally apply method *)
+    return! Result.foldList (flip (apply globals)) (Success meth) cArgs'
+  }
 
 (* Substitute t for the bound var with index n in subject *)
 and subst (n : nat) (t : term) (subject : term) : term result =
