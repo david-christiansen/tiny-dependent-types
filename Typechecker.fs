@@ -30,7 +30,7 @@ open Nat
 open AST
 open Result
 open Utils
-
+open Induction
 
 module Global =
   type env = Env of (string * term * term) list
@@ -121,7 +121,7 @@ let rec normalize (globals : Global.env) = function
     }
   | Ind (d, cs, args) -> res {
       let! args' = Result.mapList (normalize globals) args
-      return Ind (d, cs, args') (* TODO: Actually run when all args present *)
+      return Ind (d, cs, args')
     }
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
@@ -151,12 +151,19 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         return Constructor (c, args')
       }
     | Ind (d, cs, args) -> res {
-        do! Result.failIf (args.Length >= cs.Length + 2) ("Too many args to eliminator.")
+        do! Result.failIf (args.Length >= numIndArgs d cs) ("Too many args to eliminator.")
         let! newArg = normalize globals t2
         let args' = snoc args newArg
-        return Ind (d, cs, args')
+        if args'.Length = numIndArgs d cs
+          then return! doInduction d cs args'
+          else return Ind (d, cs, args')
       }
     | _ -> Success <| App (t1, t2)
+
+and doInduction (d : datatype) (cs : construct list) (args : term list) : term result =
+  if args.Length <> numIndArgs d cs
+  then Failure "Type check error - wrong nr. args to eliminator"
+  else Failure "TODO"
 
 (* Substitute t for the bound var with index n in subject *)
 and subst (n : nat) (t : term) (subject : term) : term result =
@@ -332,7 +339,7 @@ let rec typecheck gamma (globals : Global.env) = function
       cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
       cType c.name gamma globals args c.signature (Datatype c.result)
-  | Ind (d, cs, args) -> applyList gamma globals (Induction.elimType d cs) args
+  | Ind (d, cs, args) -> applyList gamma globals (elimType d cs) args
 
 and cType name gamma globals arguments signature result =
   let rec makePi result = function

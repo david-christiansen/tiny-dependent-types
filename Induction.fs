@@ -44,3 +44,9 @@ let elimType d cs =
     | (m, mt) :: methods -> Pi (m, mt, mtToPi methods)
   targets d (motive d (mtToPi methTypes))
   |> Grammar.fixVars
+
+let numIndArgs (d : datatype) (cs : construct list) =
+  1 + // Subject
+  d.signature.Length + // Targets
+  1 + // Motive
+  cs.Length // Methods
