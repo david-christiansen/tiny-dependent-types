@@ -156,7 +156,7 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         let args' = snoc args newArg
         return Ind (d, cs, args')
       }
-    | _ -> Failure "Can only apply lambda or pi"
+    | _ -> Success <| App (t1, t2)
 
 (* Substitute t for the bound var with index n in subject *)
 and subst (n : nat) (t : term) (subject : term) : term result =
@@ -332,7 +332,7 @@ let rec typecheck gamma (globals : Global.env) = function
       cType d.name gamma globals args d.signature (Univ Z) (* TODO: predicativity *)
   | Constructor (c, args) ->
       cType c.name gamma globals args c.signature (Datatype c.result)
-  | Ind (d, cs, args) -> Success <| Induction.elimType d cs
+  | Ind (d, cs, args) -> applyList gamma globals (Induction.elimType d cs) args
 
 and cType name gamma globals arguments signature result =
   let rec makePi result = function
@@ -348,6 +348,17 @@ and cType name gamma globals arguments signature result =
         return! cType name gamma globals ars newSig result
       }
 
-
+and applyList (gamma : env) (globals : Global.env) (opT : term) = function
+  | [] -> Success opT
+  | arg :: args -> res {
+      let! argT = typecheck gamma globals arg
+      do! match opT with
+            | Pi (_, opArgT, opBodyT) -> equiv globals opArgT argT
+            | _ -> Failure
+                   <| sprintf "Attempted to apply non-Π type %s to arguments %s"
+                      (pprintTerm opT) (join " " (List.map pprintTerm (arg :: args)))
+      let! opT' = apply globals opT arg
+      return! applyList gamma globals opT' args
+    }
 
 
