@@ -30,7 +30,6 @@ type 'a result =
   | Success of 'a
   | Failure of string
 
-
 module Result =
   let fold (onSuccess: 'a -> 'b) (onFail: string -> 'b) (res : 'a result) : 'b =
     match res with
@@ -42,6 +41,15 @@ module Result =
     match res with
       | Success a   -> Success <| f a
       | Failure msg -> Failure msg
+
+  (* <*> *)
+  let apply (f : ('a -> 'b) result) (x : 'a result) : 'b result =
+    match f with
+      | Success f' -> map f' x
+      | Failure msg -> Failure msg
+
+  let lift2 (f : 'a -> 'b -> 'c) (a : 'a result) (b : 'b result) : 'c result =
+    apply (map f a) b
 
   let bind (f : 'a -> 'b result) (res : 'a result) : 'b result =
     match res with

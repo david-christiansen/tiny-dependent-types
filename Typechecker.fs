@@ -245,11 +245,38 @@ and substSignature (n : nat) (t : term) = function
       return (x, ty') :: ss'
     }
 
+let rec alphaEqual t1 t2 =
+  match t1, t2 with
+    | Bound n, Bound m -> n = m
+    | Free x, Free y -> x = y
+    | Pi (_, t1, t2), Pi (_, t1', t2') -> alphaEqual t1 t1' && alphaEqual t2 t2'
+    | Lambda (_, t1, t2), Lambda (_, t1', t2') -> alphaEqual t1 t1' && alphaEqual t2 t2'
+    | Sigma (_, t1, t2), Sigma (_, t1', t2') -> alphaEqual t1 t1' && alphaEqual t2 t2'
+    | Pair (_, t1, t2), Pair (_, t1', t2') -> alphaEqual t1 t1' && alphaEqual t2 t2'
+    | Fst t, Fst t' -> alphaEqual t t'
+    | Snd t, Snd t' -> alphaEqual t t'
+    | App (t1, t2), App (t1', t2') -> alphaEqual t1 t1' && alphaEqual t2 t2'
+    | Univ n, Univ m -> n = m
+    | Postulated (str, tp), Postulated (str', tp') -> str = str' && alphaEqual tp tp'
+    | Datatype (d, args), Datatype (d', args') ->
+        d = d' && args.Length = args'.Length &&
+        List.zip args args' |> List.map (uncurry alphaEqual) |> List.fold (&&) true
+    | Constructor (c, args), Constructor (c', args') ->
+        c = c' && args.Length = args'.Length &&
+        List.zip args args' |> List.map (uncurry alphaEqual) |> List.fold (&&) true
+    | Ind (d, cs, args), Ind (d', cs', args') ->
+        d = d' && cs = cs' &&
+        List.zip args args' |> List.map (uncurry alphaEqual) |> List.fold (&&) true
+    | _ -> false
+
+let (=|=) t1 t2 = alphaEqual t1 t2
 
 let equiv (globals : Global.env) t1 t2 : unit result =
-  if normalize globals t1 = normalize globals t2
-  then Success ()
-  else Failure <| sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2)
+  res {
+    let! matches = Result.lift2 alphaEqual (normalize globals t1) (normalize globals t2)
+    return! Result.failIf (not matches)
+            <| sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2)
+  }
 
 
 let rec shiftUp (cutoff : nat) (subject : term) : term =
