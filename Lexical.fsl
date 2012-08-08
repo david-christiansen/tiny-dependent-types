@@ -50,6 +50,7 @@ let mkString (s : string) =
 
 let letter      = ['a'-'z' 'A'-'Z']
 let digit       = ['0'-'9']
+let extraId     = "'" | ['_']
 let space       = [' ' '\t']
 let filenamechar = ['a'-'z' 'A'-'Z' '/' '0'-'9' ' ' '_']
 let quote       = '\"'
@@ -58,7 +59,7 @@ let lambda      = '\\' | "λ"
 
 rule token = parse
   | space|newline         { token lexbuf }
-  | letter(letter|digit)* { keyword (lexemeAsString lexbuf) }
+  | letter(letter|digit|extraId)* { keyword (lexemeAsString lexbuf) }
   | quote filenamechar+ quote { mkString (lexemeAsString lexbuf) }
   | lambda                { LAMBDA }
   | "Π"                   { PI     }
