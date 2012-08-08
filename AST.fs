@@ -57,7 +57,7 @@ and construct = {
     result : (datatype * term list)
   }
 
-type case = Case of (string * term)
+type case = Case of (string * (string * term) list * term list)
 
 type command =
   | Eval of term
@@ -107,6 +107,25 @@ let rec usesBinding n t =
         |> List.fold (||) false
 
 
+let rec mapFreeVars (onFree : string -> term) = function
+  | Free x -> onFree x
+  | Pi (x, t1, t2) -> Pi (x, mapFreeVars onFree t1, mapFreeVars onFree t2)
+  | Lambda (x, t1, t2) -> Lambda (x, mapFreeVars onFree t1, mapFreeVars onFree t2)
+  | Sigma (x, t1, t2) -> Sigma (x, mapFreeVars onFree t1, mapFreeVars onFree t2)
+  | Pair (x, t1, t2) -> Pair (x, mapFreeVars onFree t1, mapFreeVars onFree t2)
+  | Fst t' -> Fst <| mapFreeVars onFree t'
+  | Snd t' -> Snd <| mapFreeVars onFree t'
+  | App (t1, t2) -> App (mapFreeVars onFree t1, mapFreeVars onFree t2)
+  | Univ n -> Univ n
+  | Postulated (str, tp) -> Postulated (str, mapFreeVars onFree tp)
+  | Datatype (d, args) ->
+      Datatype ({d with signature = List.map (fun (a, t) -> a, mapFreeVars onFree t) d.signature},
+                List.map (mapFreeVars onFree) args)
+  | Constructor (c, args) ->
+      Constructor ({c with
+                      signature = List.map (fun (a, t) -> a, mapFreeVars onFree t) c.signature
+                      result = (fst c.result, List.map (mapFreeVars onFree) (snd c.result))},
+                   List.map (mapFreeVars onFree) args)
 
 let rec pprintTerm t = pprintTerm' t []
 and pprintTerm' t ctx =

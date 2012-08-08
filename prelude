@@ -1,7 +1,13 @@
-:postulate Bool : Set
+:data Bool : Set | tt : Bool | ff : Bool
 
-:postulate true : Bool
+:data List (A : Set) : Set | Nil (A : Set) : List A | Cons (A : Set) (a : A) (as : List A) : List A
 
-:postulate false : Bool
+:data Nat : Set | Z : Nat | S (n : Nat) : Nat
+
+:data Fin (n : Nat) : Set | fz (k : Nat) : Fin (S k) | fsuc (n : Nat) (f : Fin n) : Fin (S n)
+
+:data Tree : Set | Leaf : Tree | Branch (t1 : Tree) (t2 : Tree) : Tree
 
 :def id := \T:Set.\x:T.x
+
+

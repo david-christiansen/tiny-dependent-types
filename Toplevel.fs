@@ -112,7 +112,7 @@ and handleCmd (s : state) (cmd : command) : state result =
     | ShowState -> showState s ; Success s
     | Load x -> printfn "loading %A..." x ;
                 loadFile s x
-    | DataDef (x,args,y,z) -> printfn "%A -- %A -- %A -- %A" x args y z; Success s
+    | DataDef (name, args, univ, cases) -> doDefineData s name args univ cases
     | Def (x, t) -> doDefine s x t
     | ToggleDebug -> printfn "Debugging is now %s" (if not s.debug then "ON" else "OFF") ;
                      Success {s with debug = not s.debug}
@@ -156,7 +156,38 @@ and doDefine (s : state) (x : string) (t : term) : state result =
       Failure
       <| sprintf "%s already defined as %s  :  %s" x (pprintTerm tm) (pprintTerm tp)
 
-let addInductive (s : state) (t : datatype) (cs : construct list) : state result =
+
+and doDefineData (s : state) typename typeargs univ cases =
+  let defineType s =
+    res {
+      let! tSig = Result.mapList (fun (a, t) -> Result.map (fun x -> a, x)
+                                                  (normalize s.globals t)) typeargs
+      return {
+          datatype.name = typename
+          datatype.signature = tSig
+        }
+    }
+  let makeConstruct (s : state) (resT : datatype) (aCase : case) : construct result =
+    match aCase with
+      Case (cname, cargs, resargs) ->
+        res {
+          let! cargs' = Result.mapList (fun (a, t) -> Result.map (fun x -> a, x)
+                                                        (normalize s.globals t)) cargs
+          do! Result.failIf (resargs.Length = 0 || resargs.Head <> Free (resT.name))
+                (sprintf "Constructors must construct their datatype.")
+          return { name = cname
+                   signature = cargs'
+                   result = (resT, resargs.Tail)
+                 }
+        }
+  res {
+    let! newT = defineType s
+    let! s' = defineCheck newT.name (Datatype (newT, [])) s
+    let! constrs = Result.mapList (makeConstruct s' newT) cases
+    return! addInductive s newT constrs
+  }
+
+and addInductive (s : state) (t : datatype) (cs : construct list) : state result =
   let defineConstr (s : state) (c : construct) : state result =
     res {
       let name = c.name
@@ -182,72 +213,7 @@ let addInductive (s : state) (t : datatype) (cs : construct list) : state result
 let startState : state =
   let emptyState = {globals = Global.empty ; debug = false}
 
-  let unitT : datatype = {name = "Unit" ; signature = []}
-  let un : construct = {name = "unit" ; signature = []; result = (unitT, [])}
-
-  let unitState = addInductive emptyState unitT [un]
-                  |> Result.fold id
-                      (fun err -> printfn "Couldn't add Unit: %s" err ; emptyState)
-
-  (* Temporary hack until parsing works *)
-  let natT : datatype = {name = "Nat"; signature = []}
-  let natZ : construct = {name = "Z" ; signature = [] ; result = (natT, [])}
-  let natS : construct = {name = "S" ; signature = [("n", Free "Nat")] ; result = (natT, []) }
-
-  let natState = addInductive unitState natT [natZ ; natS]
-                 |> Result.fold id
-                      (fun err -> printfn "Couldn't add Nat: %s" err ; unitState)
-
-  let treeT : datatype = {name = "Tree" ; signature = []}
-  let leaf : construct = {name = "Leaf" ; signature = [] ; result = (treeT, [])}
-  let branch : construct = {
-      name = "Branch"
-      signature = [("t1", Free "Tree"); ("t2", Free "Tree")]
-      result = (treeT, [])
-    }
-  let treeState = addInductive natState treeT [leaf ; branch]
-                 |> Result.fold id
-                      (fun err -> printfn "Couldn't add Tree: %s" err ; natState)
-
-  let listT : datatype = {name = "List" ; signature = [("A", Univ Z)]}
-  let nilC : construct = {
-    name = "Nil"
-    signature = [("A", Univ Z)]
-    result = (listT, [Bound Z])
-  }
-  let consC : construct = {
-    name = "Cons"
-    signature = [ ("A", Univ Z)
-                ; ("a", Bound Z)
-                ; ("as", App (Free "List", Bound (S Z)))
-                ]
-    result = (listT, [Bound (S (S Z))])
-  }
-
-  let listState = addInductive treeState listT [nilC ; consC]
-                  |> Result.fold id
-                      (fun err -> printfn "Couldn't add List: %s" err ; treeState)
-
-  let idT : datatype = {
-    name = "Id"
-    signature = [ ("A", Univ Z)
-                ; ("a", Bound Z)
-                ; ("a'", Bound (S Z))
-                ]
-  }
-  let reflC : construct = {
-    name = "refl"
-    signature = [ ("A", Univ Z)
-                ; ("a", Bound Z)
-                ]
-    result = (idT, [Bound (S Z); Bound Z; Bound Z])
-  }
-
-  let idState = addInductive listState idT [reflC]
-                  |> Result.fold id
-                      (fun err -> printfn "Couldn't add List: %s" err ; listState)
-
-  loadFile idState "prelude"
+  loadFile emptyState "prelude"
   |> Result.fold (id)
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
                    emptyState)

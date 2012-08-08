@@ -25,8 +25,8 @@ Lexical.dll: Lexical.fs Grammar.dll
 Grammar.fs: Grammar.fsy
 	$(FSYACC) --module Grammar Grammar.fsy
 
-Grammar.dll: Grammar.fs AST.dll
-	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll Grammar.fs
+Grammar.dll: Grammar.fs AST.dll Utils.dll
+	$(FSC) $(LIBFLAGS) $(FLAGS) -r AST.dll -r Utils.dll Grammar.fs
 
 Result.dll: Result.fs
 	$(FSC) $(LIBFLAGS) $(FLAGS) Result.fs

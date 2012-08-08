@@ -26,6 +26,7 @@ furnished to do so, subject to the following conditions:
 *)
 open Nat
 open AST
+open Utils
 
 let rec fixVars t = fixVars' [] t
 and fixVars' ctx t =
@@ -62,12 +63,24 @@ and fixSigVars (ctx : string list) = function
   | [] -> []
   | (x, t) :: rest -> (x, fixVars' ctx t) :: fixSigVars (x::ctx) rest
 
+let rec fixDataArgs ctx = function
+  | [] -> []
+  | (x, tp) :: args -> (x, fixVars' ctx tp) :: fixDataArgs (x::ctx) args
+
+
 let mkDataDef (name : string) (args : (string * term) list) (t : term) (cases : case list) : command =
-  let rec fixArgs ctx = function
-    | [] -> []
-    | (x, tp) :: args -> (x, fixVars' ctx tp) :: fixArgs (x::ctx) args
   let fixedT = fixVars' (List.map fst args) t
-  DataDef (name, fixArgs [] args, fixedT, cases)
+  let rec extractArgs soFar = function
+    | Pi (x, xt, body) -> extractArgs (snoc soFar (x, xt)) body
+    | t -> soFar, t
+  let (moreArgs, result) = extractArgs [] fixedT
+  DataDef (name, fixDataArgs [] args @ moreArgs, result, cases)
+
+let mkCase (name : string) (args : (string * term) list) (result : term): case =
+  let rec makeArgs = function
+    | App (op, arg) -> snoc (makeArgs op) arg
+    | x -> [x]
+  Case (name, fixDataArgs [] args, makeArgs <| fixVars' (List.rev (List.map fst args)) result)
 %}
 
 %token <string> ID
@@ -108,14 +121,18 @@ file_cmd:
   | CMD_DEF ID MAKE_EQUAL exprTop      { Def ($2, $4)         }
 
 file:
-  | file_cmd SEPARATOR file         { $1 :: $3             }
-  | file_cmd EOF                    { [$1]                 }
+  | file_cmd seps file                 { $1 :: $3             }
+  | file_cmd seps EOF                  { [$1]                 }
+
+seps:
+  | SEPARATOR                          {                      }
+  | SEPARATOR seps                     {                      }
 
 cases:
   |                                 { []                   }
   | case cases                      { $1 :: $2             }
 case:
-  | PIPE ID COLON expr              { Case ($2, $4)        }
+  | PIPE ID dataArgs COLON expr     { mkCase $2 $3 $5   }
 
 dataArg:
   | LPAR ID COLON exprTop RPAR      { ($2, $4)             }
