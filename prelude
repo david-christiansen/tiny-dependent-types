@@ -8,6 +8,8 @@
 
 :data Tree : Set | Leaf : Tree | Branch (t1 : Tree) (t2 : Tree) : Tree
 
+:data Id (A : Set) (a : A) (a' : A) : Set | refl (A : Set) (a : A) : Id A a a
+
 :def id := \T:Set.\x:T.x
 
 
