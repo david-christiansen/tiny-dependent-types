@@ -171,14 +171,14 @@ and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (arg
     (* select method *)
     let meth = methods.Item(List.findIndex (fun c' -> c = c') cs)
 
-    (* recurse on constr args *)
-    let! cArgs' = Result.mapList (function
+    (* recurse on constr args - that is, provide induction hypotheses *)
+    let! indHyps = Result.sequence <| List.choose (function
         | Constructor (c', a') ->
-            doInduction globals d cs (Constructor (c', a') :: more)
-        | x -> Success x) cArgs
+            Some <| doInduction globals d cs (Constructor (c', a') :: more)
+        | _ -> None) cArgs
 
     (* finally apply method *)
-    return! Result.foldList (flip (apply globals)) (Success meth) cArgs'
+    return! Result.foldList (flip (apply globals)) (Success meth) (cArgs @ indHyps)
   }
 
 (* Substitute t for the bound var with index n in subject *)
