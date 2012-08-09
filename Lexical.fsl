@@ -58,7 +58,9 @@ let newline     = "\n\r" | '\n' | '\r'
 let lambda      = '\\' | "λ"
 
 rule token = parse
-  | space|newline         { token lexbuf }
+  | space                 { token lexbuf }
+  | newline               { lexbuf.EndPos <- lexbuf.EndPos.NextLine ;
+                            token lexbuf }
   | letter(letter|digit|extraId)* { keyword (lexemeAsString lexbuf) }
   | quote filenamechar+ quote { mkString (lexemeAsString lexbuf) }
   | lambda                { LAMBDA }
@@ -73,7 +75,9 @@ rule token = parse
   | ":="                  { MAKE_EQUAL }
   | ':'                   { COLON }
   | '|'                   { PIPE  }
-  | newline newline       { SEPARATOR }
+  | newline newline       { lexbuf.EndPos <- lexbuf.EndPos.NextLine ;
+                            lexbuf.EndPos <- lexbuf.EndPos.NextLine ;
+                            SEPARATOR }
   | ":q" | ":quit"        { CMD_QUIT      }
   | ":p" | ":postulate"   { CMD_POSTULATE }
   | ":s" | ":showstate"   { CMD_SHOWSTATE }
