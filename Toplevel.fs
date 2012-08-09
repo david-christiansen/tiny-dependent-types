@@ -98,12 +98,15 @@ let rec loop (le : LineEditor) (s : state) : unit =
        |> Result.fold (printfn "Parse result: %A")
             (printfn "Parse error: %s")
 
-
-  Lexical.lex input
-  |> parse
-  |> Result.bind (handleCmd s)
-  |> Result.fold (loop le)
-                 (fun err -> printfn "%s" err ; loop le s)
+  try
+    Lexical.lex input
+    |> parse
+    |> Result.bind (handleCmd s)
+    |> Result.fold (loop le) (fun err -> printfn "%s" err ; loop le s)
+  with
+    | exn -> printfn "Exception during command execution: %A" exn.Message
+             if s.debug then printfn "Stack trace:\n%s" exn.StackTrace
+             loop le s
 
 and handleCmd (s : state) (cmd : command) : state result =
   match cmd with

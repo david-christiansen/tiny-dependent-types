@@ -1,7 +1,7 @@
 FSC=fsharpc
 FSLEX=fslex
 FSYACC=fsyacc
-FLAGS=-r FSharp.PowerPack.dll --utf8output
+FLAGS=-r FSharp.PowerPack.dll --utf8output --debug+ --debug:full
 LIBFLAGS=--target:library
 
 Toplevel.exe: Toplevel.fs AST.dll Lexical.dll Grammar.dll Result.dll Induction.dll Typechecker.dll Utils.dll getline.dll
