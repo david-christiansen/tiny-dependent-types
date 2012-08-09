@@ -12,4 +12,5 @@
 
 :def id := \T:Set.\x:T.x
 
+:def double := \n:Nat.NatElim n (\s:Nat.Nat) Z (\n:Nat.\m:Nat. S (S m))
 
