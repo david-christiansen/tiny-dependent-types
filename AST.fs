@@ -108,6 +108,7 @@ let rec usesBinding n t =
 
 
 let rec mapFreeVars (onFree : string -> term) = function
+  | Bound n -> Bound n
   | Free x -> onFree x
   | Pi (x, t1, t2) -> Pi (x, mapFreeVars onFree t1, mapFreeVars onFree t2)
   | Lambda (x, t1, t2) -> Lambda (x, mapFreeVars onFree t1, mapFreeVars onFree t2)
@@ -126,6 +127,54 @@ let rec mapFreeVars (onFree : string -> term) = function
                       signature = List.map (fun (a, t) -> a, mapFreeVars onFree t) c.signature
                       result = (fst c.result, List.map (mapFreeVars onFree) (snd c.result))},
                    List.map (mapFreeVars onFree) args)
+  | Ind (d, cs, args) ->
+      Ind ({d with
+              signature = List.map (fun (a, t) -> a, mapFreeVars onFree t) d.signature},
+           List.map (fun c ->
+                     {c with
+                       signature = List.map (fun (a, t) -> a, mapFreeVars onFree t) c.signature
+                       result = (fst c.result, List.map (mapFreeVars onFree) (snd c.result))})
+                    cs,
+           List.map (mapFreeVars onFree) args)
+
+let rec foldVars (onAtom : 'a) (onFree : string -> 'a) (onBound : nat -> 'a) (combine : 'a -> 'a -> 'a) (t : term) : 'a =
+  let recurse : term -> 'a = foldVars onAtom onFree onBound combine
+  match t with
+    | Free x -> onFree x
+    | Bound n -> onBound n
+    | Pi (_, t1, t2) -> combine (recurse t1) (recurse t2)
+    | Lambda (_, t1, t2) -> combine (recurse t1) (recurse t2)
+    | Sigma (_, t1, t2) -> combine (recurse t1) (recurse t2)
+    | Pair (_, t1, t2) -> combine (recurse t1) (recurse t2)
+    | Fst t' -> recurse t'
+    | Snd t' -> recurse t'
+    | App (t1, t2) -> combine (recurse t1) (recurse t2)
+    | Univ _ -> onAtom
+    | Postulated (_, t) -> recurse t
+    | Datatype (_, args) -> List.fold combine onAtom (List.map recurse args)
+    | Constructor (_, args) -> List.fold combine onAtom (List.map recurse args)
+    | Ind (d, cs, args) -> List.fold combine onAtom (List.map recurse args)
+
+let containsVars (tm : term) : bool = foldVars false (fun _ -> true) (fun _ -> true) (||) tm
+
+let locallyClosed =
+  let rec locallyClosed' m =
+    function
+      | Free x -> true
+      | Bound n -> (S n) @<= m
+      | Pi (_, t1, t2) -> locallyClosed' m t1 && locallyClosed' (S m) t2
+      | Lambda (_, t1, t2) -> locallyClosed' m t1 && locallyClosed' (S m) t2
+      | Sigma (_, t1, t2) -> locallyClosed' m t1 && locallyClosed' (S m) t2
+      | Pair (_, t1, t2) -> locallyClosed' m t1 && locallyClosed' (S m) t2
+      | Fst t -> locallyClosed' m t
+      | Snd t -> locallyClosed' m t
+      | App (t1, t2) -> locallyClosed' m t1 && locallyClosed' m t2
+      | Univ _ -> true
+      | Postulated (_, _) -> true
+      | Datatype (_, args) -> List.forall (locallyClosed' m) args
+      | Constructor (_, args) -> List.forall (locallyClosed' m) args
+      | Ind (_, _, args) -> List.forall (locallyClosed' m) args
+  locallyClosed' Z
 
 let rec pprintTerm t = pprintTerm' t []
 and pprintTerm' t ctx =

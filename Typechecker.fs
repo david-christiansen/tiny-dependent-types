@@ -121,7 +121,10 @@ let rec normalize (globals : Global.env) = function
     }
   | Ind (d, cs, args) -> res {
       let! args' = Result.mapList (normalize globals) args
-      return Ind (d, cs, args')
+      let! ind' = if args'.Length = numIndArgs d cs && List.forall locallyClosed args'
+                  then doInduction globals d cs args'
+                  else Success <| Ind (d, cs, args')
+      return ind'
     }
 
 and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
@@ -154,9 +157,7 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
         do! Result.failIf (args.Length >= numIndArgs d cs) ("Too many args to eliminator.")
         let! newArg = normalize globals t2
         let args' = snoc args newArg
-        if args'.Length = numIndArgs d cs
-          then return! doInduction globals d cs args'
-          else return Ind (d, cs, args')
+        return! normalize globals <| Ind (d, cs, args')
       }
     | _ -> Success <| App (t1, t2)
 
