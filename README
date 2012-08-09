@@ -19,7 +19,7 @@ Additionally, the following commands are available:
 :postulate    :p    Postulate a new opaque term inhabiting some type.
                     Example: :postulate Bool : Set
 :showstate    :s    Show the contents of the global state (definitions).
-:data               Placeholder for datatype definitions.
+:data               Define inductive datatypes.  For examples, see the file 'prelude'.
 :define       :def  Define a new term in the global state.
                     Example: :def id := \T:Set.\x:T.x
 :load         :l    Read the contents of a file, executing as if they were typed at
