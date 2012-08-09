@@ -1,7 +1,8 @@
 This is a very simple and probably broken implementation of an as-yet-unnamed
 dependently-typed language.
 
-As of yet, it has only been developed with Mono running on Ubuntu.  You will
+As of yet, it has only been developed with Mono running on Ubuntu, though
+success has been reported in making it work with Mono on Mac OS X.  You will
 probably have to modify the Makefile in order to get it to compile; in
 particular, make sure to check the variable FSC for the name of your F#
 compiler.
