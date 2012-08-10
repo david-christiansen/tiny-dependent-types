@@ -21,10 +21,6 @@ let motive d contents =
   let motiveT = targets d (Univ Z) (* TODO: Predicativity *)
   Pi ("P", motiveT, contents)
 
-let noMethods d =
-  targets d (motive d (App (Free "P", Free "x")))
-  |> Grammar.fixVars
-
 let methType d c goal =
   (* Compute induction hypotheses *)
   let rec hyps goal = function
