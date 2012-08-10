@@ -28,10 +28,10 @@ module Result
 
 type 'a result =
   | Success of 'a
-  | Failure of string
+  | Failure of Lazy<string>
 
 module Result =
-  let fold (onSuccess: 'a -> 'b) (onFail: string -> 'b) (res : 'a result) : 'b =
+  let fold (onSuccess: 'a -> 'b) (onFail: Lazy<string> -> 'b) (res : 'a result) : 'b =
     match res with
       | Success a   -> onSuccess a
       | Failure msg -> onFail msg
@@ -56,18 +56,18 @@ module Result =
       | Success a -> f a
       | Failure msg -> Failure msg
 
-  let fromOption (err : string) = function
+  let fromOption (err : Lazy<string>) = function
     | None -> Failure err
     | Some a -> Success a
 
-  let filter (p : 'a -> bool) (err : 'a -> string) = function
+  let filter (p : 'a -> bool) (err : 'a -> Lazy<string>) = function
       | Success a when p a -> Success a
       | Success a -> Failure <| err a
       | Failure msg -> Failure msg
 
   let guard (cond : 'a result) : unit result = map (fun _ -> ()) cond
 
-  let failIf (cond : bool) (err : string) : unit result =
+  let failIf (cond : bool) (err : Lazy<string>) : unit result =
     if cond then Failure err else Success ()
 
   let foreach (op : 'a -> unit) = function

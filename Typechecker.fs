@@ -39,7 +39,7 @@ module Global =
 
   let rec lookup (x : string) = function Env env -> lookup' x env
   and lookup' (x : string) = function
-    | [] -> Failure <| x + " not found in environment."
+    | [] -> Failure <| lazy (x + " not found in environment.")
     | (y, t1, t2) :: rest when x = y -> Success (t1, t2)
     | _ :: rest -> lookup' x rest
 
@@ -52,7 +52,7 @@ type env = Env of term list
 
 let rec getEnv n s =
   match n, s with
-    | _, Env []        -> Failure "Ran out of variables. Parser bug?"
+    | _, Env []        -> Failure <| lazy "Ran out of variables. Parser bug?"
     | Z, Env (t::ts)   -> Success t
     | S n, Env (t::ts) -> getEnv n (Env ts)
 
@@ -91,7 +91,7 @@ let rec normalize (globals : Global.env) = function
       let! first =
         match x' with
           | (Pair (x, w, prf)) -> Success w
-          | _ -> Failure <| sprintf "Can't take first projection of %s" (pprintTerm x')
+          | _ -> Failure <| lazy (sprintf "Can't take first projection of %s" (pprintTerm x'))
       return first
     }
   | Snd x -> res {
@@ -99,7 +99,7 @@ let rec normalize (globals : Global.env) = function
       let! second =
         match x' with
           | (Pair (x, w, prf)) -> subst Z w prf
-          | _ -> Failure <| sprintf "Can't take second projection of %s" (pprintTerm x')
+          | _ -> Failure <| lazy (sprintf "Can't take second projection of %s" (pprintTerm x'))
       let! second' = normalize globals second
       return second'
     }
@@ -141,20 +141,20 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
       }
     | Datatype (d, args) -> res {
         do! Result.failIf (d.signature.Length <= args.Length)
-              (sprintf "Too many arguments to %s. Typechecker bug?" d.name)
+              <| lazy (sprintf "Too many arguments to %s. Typechecker bug?" d.name)
         let! newArg = normalize globals t2
         let args' = snoc args newArg
         return Datatype (d, args')
       }
     | Constructor (c, args) -> res {
         do! Result.failIf (c.signature.Length <= args.Length)
-              (sprintf "Too many arguments to %s. Typechecker bug?" c.name)
+              <| lazy (sprintf "Too many arguments to %s. Typechecker bug?" c.name)
         let! newArg = normalize globals t2
         let args' = snoc args newArg
         return Constructor (c, args')
       }
     | Ind (d, cs, args) -> res {
-        do! Result.failIf (args.Length >= numIndArgs d cs) ("Too many args to eliminator.")
+        do! Result.failIf (args.Length >= numIndArgs d cs) (lazy "Too many args to eliminator.")
         let! newArg = normalize globals t2
         let args' = snoc args newArg
         return! normalize globals <| Ind (d, cs, args')
@@ -163,7 +163,7 @@ and apply (globals : Global.env) (t1 : term) (t2 : term) : term result =
 
 and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (args : term list) : term result =
   if args.Length <> numIndArgs d cs
-  then Failure "Type check error - wrong nr. args to eliminator"
+  then Failure <| lazy "Type check error - wrong nr. args to eliminator"
   else res {
     let (Constructor (c, cArgs) :: more) = args // subject
     let more' = List.drop (d.signature.Length) more // targets
@@ -276,7 +276,7 @@ let equiv (globals : Global.env) t1 t2 : unit result =
   res {
     let! matches = Result.lift2 alphaEqual (normalize globals t1) (normalize globals t2)
     return! Result.failIf (not matches)
-            <| sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2)
+            <| lazy (sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2))
   }
 
 
@@ -348,8 +348,8 @@ let rec typecheck gamma (globals : Global.env) = function
       let! result =
         match pairT with
           | Sigma (x, ty, p) -> Success ty
-          | t -> Failure <| sprintf "Cannot take first projection of non-Σ-type %s"
-                              (pprintTerm t)
+          | t -> Failure <| lazy (sprintf "Cannot take first projection of non-Σ-type %s"
+                                    (pprintTerm t))
       let! result' = normalize globals result
       return result'
     }
@@ -358,8 +358,8 @@ let rec typecheck gamma (globals : Global.env) = function
       let! secondT =
         match pairT with
           | Sigma (x, ty, p) -> Success p
-          | t -> Failure <| sprintf "Cannot take second projection of non-Σ-type %s"
-                              (pprintTerm t)
+          | t -> Failure <| lazy (sprintf "Cannot take second projection of non-Σ-type %s"
+                                    (pprintTerm t))
       let! first = normalize globals (Fst p)
       let! secondT' = subst Z first secondT
       let! secondT'' = normalize globals secondT'
@@ -372,8 +372,8 @@ let rec typecheck gamma (globals : Global.env) = function
         match tp1 with
           | Pi (_, tp1arg, tp1body) -> equiv globals tp1arg tp2
           | _ -> Failure
-                 <| sprintf "Can only apply Π-types. Attempted to apply %s to %s."
-                    (pprintTerm tp1) (pprintTerm tp2)
+                 <| lazy (sprintf "Can only apply Π-types. Attempted to apply %s to %s."
+                            (pprintTerm tp1) (pprintTerm tp2))
       let! t' = apply globals tp1 t2
       return t'
     }
@@ -391,7 +391,7 @@ and cType name gamma globals arguments signature result =
     | (x, xt) :: ss -> Pi (x, xt, makePi result ss)
   match arguments, signature with
     | [], ss -> Success <| makePi result ss
-    | _, [] -> Failure <| sprintf "Too many arguments for %s." name
+    | _, [] -> Failure <| lazy (sprintf "Too many arguments for %s." name)
     | ar :: ars, (_, s) :: ss -> res {
         let! arT = typecheck gamma globals ar
         do! Result.guard (equiv globals arT s)
@@ -406,8 +406,8 @@ and applyList (gamma : env) (globals : Global.env) (opT : term) = function
       do! match opT with
             | Pi (_, opArgT, opBodyT) -> equiv globals opArgT argT
             | _ -> Failure
-                   <| sprintf "Attempted to apply non-Π type %s to arguments %s"
-                      (pprintTerm opT) (join " " (List.map pprintTerm (arg :: args)))
+                   <| lazy (sprintf "Attempted to apply non-Π type %s to arguments %s"
+                              (pprintTerm opT) (join " " (List.map pprintTerm (arg :: args))))
       let! opT' = apply globals opT arg
       return! applyList gamma globals opT' args
     }

@@ -71,8 +71,8 @@ let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
     lexbuf |> Grammar.command Lexical.token |> Result.Success
   with
     | exn -> let pos = lexbuf.EndPos
-             in Result.Failure <| sprintf "%s near line %d, column %d\n"
-                                    (exn.Message) (pos.Line+1) pos.Column
+             in Failure <| lazy (sprintf "%s near line %d, column %d\n"
+                                    (exn.Message) (pos.Line+1) pos.Column)
 
 
 let evaluate state expr =
@@ -85,7 +85,7 @@ let evaluate state expr =
   } |> Result.fold
          (fun (x, y) ->
            printfn "  %s  :  %s" x y)
-         (printf " Error: %s\n")
+         (fun msg -> printf " Error: %s\n" (msg.Force()))
 
 let rec loop (le : LineEditor) (s : state) : unit =
   printf "\n"
@@ -96,13 +96,13 @@ let rec loop (le : LineEditor) (s : state) : unit =
        Lexical.lex input
        |> parse
        |> Result.fold (printfn "Parse result: %A")
-            (printfn "Parse error: %s")
+            (fun msg -> printfn "Parse error: %s" (msg.Force()))
 
   try
     Lexical.lex input
     |> parse
     |> Result.bind (handleCmd s)
-    |> Result.fold (loop le) (fun err -> printfn "%s" err ; loop le s)
+    |> Result.fold (loop le) (fun err -> printfn "%s" (err.Force()) ; loop le s)
   with
     | exn -> printfn "Exception during command execution: %A" exn.Message
              if s.debug then printfn "Stack trace:\n%s" exn.StackTrace
@@ -119,7 +119,7 @@ and handleCmd (s : state) (cmd : command) : state result =
     | Def (x, t) -> doDefine s x t
     | ToggleDebug -> printfn "Debugging is now %s" (if not s.debug then "ON" else "OFF") ;
                      Success {s with debug = not s.debug}
-    | Quit -> System.Environment.Exit(0) ; Failure "exiting failed"
+    | Quit -> System.Environment.Exit(0) ; Failure <| lazy "exiting failed"
 
 and handleCmds (s : state) (cmds : command list) : state result =
   match cmds with
@@ -142,9 +142,9 @@ and loadFile (s : state) (filename : string) : state result =
   try
     lexbuf |> Grammar.file Lexical.token |> handleCmds s
   with
-    | exn -> let pos = lexbuf.EndPos
-             sprintf "%s near line %d, column %d\n"
-                 (exn.Message) (pos.Line+1) pos.Column;
+    | exn -> lazy (let pos = lexbuf.EndPos
+                   sprintf "%s near line %d, column %d\n"
+                       (exn.Message) (pos.Line+1) pos.Column)
              |> Failure
 
 and doDefine (s : state) (x : string) (t : term) : state result =
@@ -157,7 +157,7 @@ and doDefine (s : state) (x : string) (t : term) : state result =
       }
     | Some (x, tm, tp) ->
       Failure
-      <| sprintf "%s already defined as %s  :  %s" x (pprintTerm tm) (pprintTerm tp)
+      <| lazy (sprintf "%s already defined as %s  :  %s" x (pprintTerm tm) (pprintTerm tp))
 
 
 and doDefineData (s : state) typename typeargs univ cases =
@@ -177,7 +177,7 @@ and doDefineData (s : state) typename typeargs univ cases =
           let! cargs' = Result.mapList (fun (a, t) -> Result.map (fun x -> a, x)
                                                         (normalize s.globals t)) cargs
           do! Result.failIf (resargs.Length = 0 || resargs.Head <> Free (resT.name))
-                (sprintf "Constructors must construct their datatype.")
+                <| lazy (sprintf "Constructors must construct their datatype.")
           return { name = cname
                    signature = cargs'
                    result = (resT, resargs.Tail)
@@ -218,7 +218,7 @@ let startState : state =
 
   loadFile emptyState "prelude"
   |> Result.fold (id)
-       (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" err ;
+       (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" (err.Force())
                    emptyState)
 
 let main () : unit =
