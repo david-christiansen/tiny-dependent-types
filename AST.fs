@@ -187,7 +187,11 @@ and pprintTerm' t ctx =
     (x', x' :: ctx)
   let addDummy ctx = "" :: ctx
   match t with
-    | Bound n -> ctx.Item(intOfNat n)
+    | Bound n ->
+        let index = intOfNat n
+        if index >= ctx.Length
+        then sprintf "*bound(%i)*" index
+        else ctx.Item(intOfNat n)
     | Free str -> "`" + str + "`"
     | Pi (x, t1, t2) when not (usesBinding Z t2) ->
         "(" + pprintTerm' t1 ctx +
