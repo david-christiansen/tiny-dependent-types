@@ -58,6 +58,8 @@ let newline     = "\n\r" | '\n' | '\r'
 let lambda      = '\\' | "λ"
 
 rule token = parse
+  | "(*"                  { blockcomments 0 lexbuf }
+  | "//"                  { linecomment lexbuf }
   | space                 { token lexbuf }
   | newline               { lexbuf.EndPos <- lexbuf.EndPos.NextLine ;
                             token lexbuf }
@@ -89,6 +91,18 @@ rule token = parse
   | ')'                   { RPAR }
   | '_'                   { UNDERSCORE }
 
+and blockcomments level = parse
+  | "*)"                  { if level = 0
+                            then token lexbuf
+                            else blockcomments (level - 1) lexbuf }
+  | "(*"                  { blockcomments (level + 1) lexbuf      }
+  | _                     { blockcomments level lexbuf            }
+
+and linecomment = parse
+  | newline               { lexbuf.EndPos <- lexbuf.EndPos.NextLine ;
+                            token lexbuf }
+  | eof                   { EOF }
+  | _                     { linecomment lexbuf }
 
 {
 let printToken (tok : Grammar.token) : string =
