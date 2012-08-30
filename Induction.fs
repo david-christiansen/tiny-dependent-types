@@ -34,6 +34,7 @@ let methType d c goal =
             shiftUp Z (App (cPremises dargs, Free r)),
             shiftUp Z (hyps goal cargs))
     | _ :: cargs -> hyps goal cargs
+  (* TODO: replace following with a fold *)
   let rec argsToPi = function
     | [] -> hyps goal c.signature
     | (name, ty) :: args -> Pi (name, ty, argsToPi args)
@@ -56,7 +57,6 @@ let elimType d cs =
   let rec mtToPi = function
     | [] -> subjectType d //(App (Free "P", Free "x"))
     | (m, mt) :: methods -> Pi (m, mt, mtToPi methods)
-  
   motive d (mtToPi methTypes) |> Grammar.fixVars
 
 let numIndArgs (d : datatype) (cs : construct list) =
