@@ -21,32 +21,44 @@ let motive d contents =
   let motiveT = targets d (Univ Z) (* TODO: Predicativity *)
   Pi ("P", motiveT, contents)
 
-let noMethods d =
-  targets d (motive d (App (Free "P", Free "x")))
-  |> Grammar.fixVars
-
+(* Compute induction hypotheses *)
 let methType d c goal =
-  (* Compute induction hypotheses *)
+  (* The premises for the motive application *)
+  let cPremises dataargs = List.foldBack (fun res ar -> App (ar, res)) dataargs goal
+  (* Generate induction hypotheses *)
   let rec hyps goal = function
-    | [] -> App (goal, Constructor (c, boundArgs (natOfInt c.signature.Length)))
+    | [] -> App (cPremises (snd c.result),
+                 (Constructor (c, boundArgs (natOfInt c.signature.Length))))
     | (r, Datatype (d', dargs)) :: cargs when d = d' ->
-        Pi (r+"'", App (goal, Free r), hyps goal cargs)
+        Pi (r+"IH",
+            shiftUp Z (App (cPremises dargs, Free r)),
+            shiftUp Z (hyps goal cargs))
     | _ :: cargs -> hyps goal cargs
   let rec argsToPi = function
     | [] -> hyps goal c.signature
     | (name, ty) :: args -> Pi (name, ty, argsToPi args)
   argsToPi c.signature |> Grammar.fixVars
 
+let subjectType d =
+  let rec computeSubject = function
+    | [] -> Pi ("x",
+                Datatype (d, boundArgs (natOfInt d.signature.Length)),
+                App (shiftUp Z <| List.foldBack (fun res ar -> App (ar, res)) (boundArgs (natOfInt d.signature.Length)) (Free "P"),
+                     Free "x"))
+         //       (App (Free "P", Free "x")))
+    | (x, t) :: moreSig -> Pi (x, t, computeSubject moreSig)
+  computeSubject d.signature
+
 let elimType d cs =
   let methTypes = List.map (fun c -> "m" + c.name, methType d c (Free "P")) cs
   let rec mtToPi = function
-    | [] -> (App (Free "P", Free "x"))
+    | [] -> subjectType d //(App (Free "P", Free "x"))
     | (m, mt) :: methods -> Pi (m, mt, mtToPi methods)
-  targets d (motive d (mtToPi methTypes))
-  |> Grammar.fixVars
+  
+  motive d (mtToPi methTypes) |> Grammar.fixVars
 
 let numIndArgs (d : datatype) (cs : construct list) =
-  1 + // Subject
   d.signature.Length + // Targets
   1 + // Motive
-  cs.Length // Methods
+  cs.Length + // Methods
+  1 // Subject
