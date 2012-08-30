@@ -12,13 +12,13 @@
 
 :def id := \T:Set.\x:T.x
 
-:def double := \n:Nat.NatElim n (\s:Nat.Nat) Z (\n:Nat.\m:Nat. S (S m))
+:def double := NatElim (\s:Nat.Nat) Z (\n:Nat.\m:Nat. S (S m))
 
-:def plus := \n:Nat.\m:Nat.NatElim n (\n':Nat.Nat) m (\a:Nat.\b:Nat.S b)
+:def plus := \m:Nat.NatElim (\n':Nat.Nat) m (\a:Nat.\b:Nat.S b)
 
-:def notb := \b:Bool.BoolElim b (\b':Bool.Bool) ff tt
+:def notb := BoolElim (\b':Bool.Bool) ff tt
 
-:def evenb := \n:Nat.NatElim n (\x:Nat.Bool) tt (\m:Nat.\mb:Bool.notb mb)
+:def evenb := NatElim (\x:Nat.Bool) tt (\m:Nat.\mb:Bool.notb mb)
 
 :data Even (N : Nat) : Set | zeroEven : Even Z | ssEven (n : Nat) (nEven : Even n) : Even (S (S n))
 

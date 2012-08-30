@@ -165,9 +165,9 @@ and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (arg
   if args.Length <> numIndArgs d cs
   then Failure <| lazy "Type check error - wrong nr. args to eliminator"
   else res {
-    let (Constructor (c, cArgs) :: more) = args // subject
-    let more' = List.drop (d.signature.Length) more // targets
-    let (motive :: methods) = more' // motive
+    let motive :: more = args
+    let methods = List.take (cs.Length) more
+    let [Constructor (c, cArgs)] = List.drop (d.signature.Length + cs.Length) more
 
     (* select method *)
     let meth = methods.Item(List.findIndex (fun c' -> c = c') cs)
@@ -175,7 +175,9 @@ and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (arg
     (* recurse on constr args - that is, provide induction hypotheses *)
     let! indHyps = Result.sequence <| List.choose (function
         | Constructor (c', a') ->
-            Some <| doInduction globals d cs (Constructor (c', a') :: more)
+            Some <| doInduction globals d cs
+                                (Constructor (c', a')
+                                 |> snoc (List.take (numIndArgs d cs - 1) args))
         | _ -> None) cArgs
 
     (* finally apply method *)
