@@ -96,6 +96,7 @@ let mkCase (name : string) (args : (string * term) list) (result : term): case =
 %start parse
 %start command
 %start file
+%start exprTop
 %type <command> parse
 %type <command> command
 %type <command list> file

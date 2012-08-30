@@ -7,6 +7,9 @@ probably have to modify the Makefile in order to get it to compile; in
 particular, make sure to check the variable FSC for the name of your F#
 compiler.
 
+Additionally, the interpreter requires the .NET port of GNU getopt, which is
+available from http://getopt.codeplex.com/ under the terms of the LGPL.
+
 Please ensure that your terminal is set to use UTF-8.  The output from the
 toplevel makes use of proper Π and λ symbols.
 
@@ -32,3 +35,7 @@ The syntax of terms generally follows ordinary conventions. However, to assist
 in typing, "\" (backslash) can be used instead of "λ", "forall" can be used
 instead of "Π", and "exists" can be used instead of "Σ".  Also, "A -> B" can
 be written instead of Πx:A.B where x is not free in B.
+
+The interpreter accepts the following command-line options:
+--help          -h      Show the command-line help
+--eval          -e      Evaluate the provided expression, then exit

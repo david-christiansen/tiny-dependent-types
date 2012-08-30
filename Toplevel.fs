@@ -29,7 +29,7 @@ module Toplevel
 open Microsoft.FSharp.Text.Lexing
 open System
 open Mono.Terminal
-
+open Gnu.Getopt
 
 open Nat
 open AST
@@ -74,6 +74,13 @@ let parse (lexbuf : Lexing.LexBuffer<char>) : command result =
              in Failure <| lazy (sprintf "%s near line %d, column %d\n"
                                     (exn.Message) (pos.Line+1) pos.Column)
 
+let parseTerm (lexbuf : Lexing.LexBuffer<char>) : term result =
+  try
+    lexbuf |> Grammar.exprTop Lexical.token |> Result.Success
+  with
+    | exn -> let pos = lexbuf.EndPos
+             in Failure <| lazy (sprintf "%s near line %d, column %d\n"
+                                    (exn.Message) (pos.Line+1) pos.Column)
 
 let evaluate state expr =
   res {
@@ -87,7 +94,7 @@ let evaluate state expr =
            printfn "  %s  :  %s" x y)
          (fun msg -> printf " Error: %s\n" (msg.Force()))
 
-let rec loop (le : LineEditor) (s : state) : unit =
+let rec loop (le : LineEditor) (s : state) : int =
   printf "\n"
   let input = le.Edit("> ","")
 
@@ -221,11 +228,71 @@ let startState : state =
        (fun err -> printfn "Could not load prelude.\nThere is no stdlib.\n Error: %s" (err.Force())
                    emptyState)
 
-let main () : unit =
+type options = {
+    showHelp : bool
+    eval : string list
+  }
+
+let defaultOpts = { showHelp = false ; eval = [] }
+
+let getOptions (args : string []) : options result =
+  let longOptions : LongOpt [] =
+    [| new LongOpt("help", Argument.No, null, int 'h')
+     ; new LongOpt("eval", Argument.Required, null, int 'e')
+     |]
+
+  let g = new Getopt("Toplevel.exe", args, "he:")
+  g.Opterr <- false
+
+  let rec processOptions opts =
+    let c = g.getopt ()
+    if c = -1
+    then opts
+    else
+      res {
+        let! currOpts = opts
+        let! newOpts =
+          match char c with
+            | 'h' -> Success { currOpts with showHelp = true }
+            | 'e' -> Success { currOpts with eval = snoc currOpts.eval g.Optarg }
+            | '?' -> Failure <| lazy (sprintf "Invalid option: %A" <| char g.Optopt)
+            | _   -> Failure <| lazy (sprintf "getopt returned %A" <| char c)
+        return newOpts
+      }
+
+  processOptions <| Success defaultOpts
+
+let help () =
+  printfn "Command-line options:"
+  printfn "   -h, --help\t\tShow this message"
+  Environment.Exit(-1)
+
+let rec evalPrint s = function
+  | [] -> Environment.Exit(0)
+  | e :: es ->
+    Lexical.lex e
+    |> parseTerm
+    |> Result.fold (evaluate s) (fun err -> printfn "%s" <| err.Force())
+    evalPrint s es
+
+[<EntryPoint>]
+let main (args : string []) : int =
+  let opts = Result.fold id
+               (fun err ->
+                printfn "%s" <| err.Force()
+                help ()
+                defaultOpts)
+               (getOptions args)
+
+  if opts.showHelp
+  then help()
+
+  if opts.eval <> []
+  then evalPrint startState opts.eval
+
   let le = new LineEditor("deptypes")
 
   printfn "Silly dependent type checker version 0.0.0.\n:q to quit."
   loop le startState
 
-main ()
 

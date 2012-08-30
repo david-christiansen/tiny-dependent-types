@@ -36,3 +36,10 @@ module List =
            | y :: ys when n = 0 -> y :: ys
            | y :: ys -> drop (n - 1) ys
 
+  let rec take (n : int) (xs : 'a list) : 'a list =
+    if n < 0
+    then raise (System.ArgumentOutOfRangeException (sprintf "take requires n >= 0, got %A" n))
+    else match xs with
+           | [] -> []
+           | y :: ys when n = 0 -> []
+           | y :: ys -> y :: (take (n - 1) ys)

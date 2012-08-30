@@ -165,17 +165,19 @@ and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (arg
   if args.Length <> numIndArgs d cs
   then Failure <| lazy "Type check error - wrong nr. args to eliminator"
   else res {
-    let (Constructor (c, cArgs) :: more) = args // subject
-    let more' = List.drop (d.signature.Length) more // targets
-    let (motive :: methods) = more' // motive
+    let motive :: more = args
+    let methods = List.take (cs.Length) more
+    let [Constructor (c, cArgs)] = List.drop (d.signature.Length + cs.Length) more
 
     (* select method *)
     let meth = methods.Item(List.findIndex (fun c' -> c = c') cs)
 
     (* recurse on constr args - that is, provide induction hypotheses *)
     let! indHyps = Result.sequence <| List.choose (function
-        | Constructor (c', a') ->
-            Some <| doInduction globals d cs (Constructor (c', a') :: more)
+        | Constructor (c', a') when (fst c'.result) = d ->
+            Some <| doInduction globals d cs
+                                (Constructor (c', a')
+                                 |> snoc (List.take (numIndArgs d cs - 1) args))
         | _ -> None) cArgs
 
     (* finally apply method *)
@@ -278,40 +280,6 @@ let equiv (globals : Global.env) t1 t2 : unit result =
     return! Result.failIf (not matches)
             <| lazy (sprintf "%s ≢ %s" (pprintTerm t1) (pprintTerm t2))
   }
-
-
-let rec shiftUp (cutoff : nat) (subject : term) : term =
-  let shiftBinding =
-    function (id, arg, body) -> (id, shiftUp cutoff arg, shiftUp (S cutoff) body)
-  let rec shiftSignature (cutoff : nat) = function
-    | [] -> []
-    | (x, t) :: rest -> (x, shiftUp cutoff t) :: shiftSignature (S cutoff) rest
-  match subject with
-    | Bound n when cutoff @<= n -> Bound (S n)
-    | Bound n -> Bound n
-    | Free x -> Free x
-    | Pi (x, tp, tm) -> Pi (shiftBinding (x, tp, tm))
-    | Lambda (x, tp, tm) -> Lambda (shiftBinding (x, tp, tm))
-    | Sigma (x, ty, p) -> Sigma (shiftBinding (x, ty, p))
-    | Pair (x, w, prf) -> Pair (shiftBinding (x, w, prf))
-    | Fst p -> Fst (shiftUp cutoff p)
-    | Snd p -> Snd (shiftUp cutoff p)
-    | App (t1, t2) -> App (shiftUp cutoff t1, shiftUp cutoff t2)
-    | Univ n -> Univ n
-    | Postulated (str, tp) -> Postulated (str, tp)
-    | Datatype (d, args) ->
-        let d' = {d with signature = shiftSignature cutoff d.signature}
-        Datatype (d', List.map (shiftUp cutoff) args)
-    | Constructor (c, args) ->
-        let c' = {c with signature = shiftSignature cutoff c.signature}
-        Constructor (c', List.map (shiftUp cutoff) args)
-    | Ind (d, cs, args) ->
-        let d' = {d with signature = shiftSignature cutoff d.signature}
-        let cs' =
-          List.map (fun (c : construct) ->
-                    {c with signature = shiftSignature cutoff c.signature})
-                   cs
-        Ind (d', cs', List.map (shiftUp cutoff) args)
 
 
 

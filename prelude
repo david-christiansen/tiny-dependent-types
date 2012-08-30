@@ -1,30 +1,62 @@
-:data Bool : Set | tt : Bool | ff : Bool
+:data Bool : Set
+  | tt : Bool
+  | ff : Bool
 
-:data List (A : Set) : Set | Nil (A : Set) : List A | Cons (A : Set) (a : A) (as : List A) : List A
+:data List (A : Set) : Set
+  | Nil (A : Set) : List A
+  | Cons (A : Set) (a : A) (as : List A) : List A
 
-:data Nat : Set | Z : Nat | S (n : Nat) : Nat
+:data Nat : Set
+  | Z : Nat
+  | S (n : Nat) : Nat
 
-:data Fin (n : Nat) : Set | fz (k : Nat) : Fin (S k) | fsuc (n : Nat) (f : Fin n) : Fin (S n)
+:def length := ListElim (\A : Set. \l: List A . Nat)
+                        (\A:Set.Z)
+                        (\A:Set.\hd:A.\tl:List A.\n:Nat.S n)
 
-:data Tree : Set | Leaf : Tree | Branch (t1 : Tree) (t2 : Tree) : Tree
+:data Fin (n : Nat) : Set
+  | fz (k : Nat) : Fin (S k)
+  | fsuc (n : Nat) (f : Fin n) : Fin (S n)
 
-:data Id (A : Set) (a : A) (a' : A) : Set | refl (A : Set) (a : A) : Id A a a
+:data Tree : Set
+  | Leaf : Tree
+  | Branch (t1 : Tree) (t2 : Tree) : Tree
+
+:data Id (A : Set) (a : A) (a' : A) : Set
+  | refl (A : Set) (a : A) : Id A a a
 
 :def id := \T:Set.\x:T.x
 
-:def double := \n:Nat.NatElim n (\s:Nat.Nat) Z (\n:Nat.\m:Nat. S (S m))
+:def double := NatElim (\s:Nat.Nat) Z (\n:Nat.\m:Nat. S (S m))
 
-:def plus := \n:Nat.\m:Nat.NatElim n (\n':Nat.Nat) m (\a:Nat.\b:Nat.S b)
+:def plus := \m:Nat.NatElim (\n':Nat.Nat) m (\a:Nat.\b:Nat.S b)
 
-:def notb := \b:Bool.BoolElim b (\b':Bool.Bool) ff tt
+:def notb := BoolElim (\b':Bool.Bool) ff tt
 
-:def evenb := \n:Nat.NatElim n (\x:Nat.Bool) tt (\m:Nat.\mb:Bool.notb mb)
+:def evenb := NatElim (\x:Nat.Bool) tt (\m:Nat.\mb:Bool.notb mb)
 
-:data Even (N : Nat) : Set | zeroEven : Even Z | ssEven (n : Nat) (nEven : Even n) : Even (S (S n))
+:data Even (N : Nat) : Set
+  | zeroEven : Even Z
+  | ssEven (n : Nat) (nEven : Even n) : Even (S (S n))
 
-:data Odd (n : Nat) : Set | oneOdd : Odd (S Z) | ssOdd (n : Nat) (nOdd : Odd n) : Odd (S (S n))
+:data Odd (n : Nat) : Set
+  | oneOdd : Odd (S Z)
+  | ssOdd (n : Nat) (nOdd : Odd n) : Odd (S (S n))
 
-:data And (A : Set) (B : Set) : Set | conj (A : Set) (B : Set) (a : A) (b : B) : And A B
+:data And (A : Set) (B : Set) : Set
+  | conj (A : Set) (B : Set) (a : A) (b : B) : And A B
 
-:data Or (A : Set) (B : Set) : Set | inl (A : Set) (B : Set) (a : A) : Or A B | inr (A : Set) (B : Set) (b : B) : Or A B
+:data Or (A : Set) (B : Set) : Set
+  | inl (A : Set) (B : Set) (a : A) : Or A B
+  | inr (A : Set) (B : Set) (b : B) : Or A B
+
+:def evenPlusOneOdd :=
+  EvenElim (\n:Nat.\e:Even n. Odd (S n))
+           oneOdd
+           (\n: Nat. \ih1: Even n . \ih2 : Odd (S n). ssOdd (S n) ih2)
+
+:def oddPlusOneEven :=
+  OddElim (\n:Nat.\o:Odd n. Even (S n))
+          (ssEven Z zeroEven)
+          (\n:Nat.\ih1: Odd n. \ih2: Even (S n). ssEven (S n) ih2)
 
