@@ -43,9 +43,11 @@ let subjectType d =
   let rec computeSubject = function
     | [] -> Pi ("x",
                 Datatype (d, boundArgs (natOfInt d.signature.Length)),
-                App (shiftUp Z <| List.foldBack (fun res ar -> App (ar, res)) (boundArgs (natOfInt d.signature.Length)) (Free "P"),
+                App (List.foldBack (fun res ar -> App (ar, res))
+                                   (boundArgs (natOfInt d.signature.Length))
+                                   (Free "P")
+                     |> shiftUp Z,
                      Free "x"))
-         //       (App (Free "P", Free "x")))
     | (x, t) :: moreSig -> Pi (x, t, computeSubject moreSig)
   computeSubject d.signature
 
