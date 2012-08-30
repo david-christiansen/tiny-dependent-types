@@ -28,3 +28,13 @@
 
 :data Or (A : Set) (B : Set) : Set | inl (A : Set) (B : Set) (a : A) : Or A B | inr (A : Set) (B : Set) (b : B) : Or A B
 
+:def evenPlusOneOdd :=
+  EvenElim (\n:Nat.\e:Even n. Odd (S n))
+           oneOdd
+           (\n: Nat. \ih1: Even n . \ih2 : Odd (S n). ssOdd (S n) ih2)
+
+:def oddPlusOneEven :=
+  OddElim (\n:Nat.\o:Odd n. Even (S n))
+          (ssEven Z zeroEven)
+          (\n:Nat.\ih1: Odd n. \ih2: Even (S n). ssEven (S n) ih2)
+
