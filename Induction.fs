@@ -24,7 +24,11 @@ let motive d contents =
 (* Compute induction hypotheses *)
 let methType d c goal =
   (* The premises for the motive application *)
-  let cPremises dataargs = List.foldBack (fun res ar -> App (ar, res)) dataargs goal
+  let cPremises dataargs =
+    List.foldBack (fun res ar -> App (ar, res))
+                  (List.rev dataargs)
+                  goal
+
   (* Generate induction hypotheses *)
   let rec hyps goal = function
     | [] -> App (cPremises (snd c.result),
@@ -45,7 +49,7 @@ let subjectType d =
     | [] -> Pi ("x",
                 Datatype (d, boundArgs (natOfInt d.signature.Length)),
                 App (List.foldBack (fun res ar -> App (ar, res))
-                                   (boundArgs (natOfInt d.signature.Length))
+                                   (List.rev (boundArgs (natOfInt d.signature.Length)))
                                    (Free "P")
                      |> shiftUp Z,
                      Free "x"))

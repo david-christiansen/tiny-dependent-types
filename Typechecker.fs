@@ -174,7 +174,7 @@ and doInduction (globals : Global.env) (d : datatype) (cs : construct list) (arg
 
     (* recurse on constr args - that is, provide induction hypotheses *)
     let! indHyps = Result.sequence <| List.choose (function
-        | Constructor (c', a') ->
+        | Constructor (c', a') when (fst c'.result) = d ->
             Some <| doInduction globals d cs
                                 (Constructor (c', a')
                                  |> snoc (List.take (numIndArgs d cs - 1) args))
